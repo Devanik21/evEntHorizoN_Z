@@ -202,7 +202,7 @@ def get_cosmic_response(prompt, file_content=None, file_type=None):
         return f"✨ The cosmic signals are unclear: {str(e)}"
 
 # --- APP LAYOUT ---
-set_page_background_and_style('black_hole.png')
+set_page_background_and_style('black_hole (1).png')
 
 st.markdown("<br>", unsafe_allow_html=True)
 
