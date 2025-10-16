@@ -97,29 +97,19 @@ def set_page_background_and_style(file_path):
         background: transparent !important;
     }}
     
-    /* White text everywhere with gradient */
+    /* White text everywhere */
     body, h1, h2, h3, h4, h5, h6, p, div, span, label, .stMarkdown {{
-        background: linear-gradient(135deg, #ffffff, #e0e0e0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: white !important;
         font-family: 'Inter', sans-serif;
     }}
     
     h1, h2, h3, h4, h5, h6 {{
         font-weight: 700;
         text-align: center;
-        background: linear-gradient(135deg, #ffffff, #d0d0d0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
     }}
     
     .subtitle {{
-        background: linear-gradient(135deg, #ffffff, #cccccc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: rgba(255,255,255,0.9);
         font-size: 1.3rem;
         margin-top: -10px;
         letter-spacing: 0.5px;
