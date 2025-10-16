@@ -49,13 +49,17 @@ def set_page_background_and_style(file_path):
     
     /* Transparent sidebar */
     [data-testid="stSidebar"] {{
-        background: rgba(0,0,0,0.2);
-        backdrop-filter: blur(15px);
-        border-right: 1px solid rgba(255,255,255,0.1);
+        background: transparent !important;
+        backdrop-filter: none !important;
+        border-right: 1px solid rgba(255,255,255,0.05);
     }}
     
     [data-testid="stSidebar"] > div {{
-        background: transparent;
+        background: transparent !important;
+    }}
+    
+    [data-testid="stSidebarContent"] {{
+        background: transparent !important;
     }}
     
     /* Remove black box at bottom */
