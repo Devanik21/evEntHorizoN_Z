@@ -101,7 +101,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # Title Section
 st.markdown("""
-<h1 class='mystic'>Grok</h1>
+<h1 class='mystic'>♾️</h1>
 <h2 class='subtitle'>Understand the universe</h2>
 """, unsafe_allow_html=True)
 
