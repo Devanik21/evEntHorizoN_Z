@@ -97,19 +97,29 @@ def set_page_background_and_style(file_path):
         background: transparent !important;
     }}
     
-    /* White text everywhere */
+    /* White text everywhere with gradient */
     body, h1, h2, h3, h4, h5, h6, p, div, span, label, .stMarkdown {{
-        color: white !important;
+        background: linear-gradient(135deg, #ffffff, #e0e0e0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-family: 'Inter', sans-serif;
     }}
     
     h1, h2, h3, h4, h5, h6 {{
         font-weight: 700;
         text-align: center;
+        background: linear-gradient(135deg, #ffffff, #d0d0d0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }}
     
     .subtitle {{
-        color: rgba(255,255,255,0.9);
+        background: linear-gradient(135deg, #ffffff, #cccccc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-size: 1.3rem;
         margin-top: -10px;
         letter-spacing: 0.5px;
@@ -123,7 +133,13 @@ def set_page_background_and_style(file_path):
     /* Transparent chat messages */
     .stChatMessage {{
         background: transparent !important;
-        color: white !important;
+    }}
+    
+    .stChatMessage * {{
+        background: linear-gradient(135deg, #ffffff, #e0e0e0) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
     }}
     
     .stChatMessage [data-testid="chatAvatarIcon"] {{
@@ -139,8 +155,14 @@ def set_page_background_and_style(file_path):
         border-radius: 15px;
         margin: 5px;
         font-size: 0.9rem;
-        color: white;
         transition: all 0.3s ease;
+    }}
+    
+    .file-badge {{
+        background: linear-gradient(135deg, #ffffff, #d0d0d0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }}
     
     .file-badge:hover {{
