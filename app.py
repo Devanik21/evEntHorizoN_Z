@@ -154,8 +154,12 @@ def set_page_background_and_style(file_path):
     /* Footer styling */
     .footer {{
         font-size: 0.9rem;
-        color: rgba(255,255,255,0.6);
+        background: linear-gradient(90deg, #404040, #1a1a1a, #404040);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         text-align: center;
+        font-weight: 500;
     }}
     
     hr {{
