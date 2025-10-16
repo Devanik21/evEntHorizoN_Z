@@ -9,8 +9,9 @@ st.set_page_config(page_title="Understand the Universe", page_icon="🌌", layou
 
 # --- CONFIGURE GEMINI API ---
 try:
+    # Note: Using a standard and recent model name.
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemma-3n-e2b-it')
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -83,11 +84,11 @@ def set_page_background_and_style(file_path):
     }}
     
     /* --- Chat Input Styling --- */
+    /* This makes the outer container of the chat input transparent */
     .stChatInput {{
-        background: rgba(0,0,0,0.3);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 15px;
+        background: transparent;
+        border: none;
+        backdrop-filter: none;
     }}
     
     /* --- Chat Message Styling --- */
@@ -111,10 +112,12 @@ def set_page_background_and_style(file_path):
     }}
     
     /* --- Text Area and Input Styling --- */
+    /* This styles the actual text input field */
     textarea, input {{
         color: white !important;
         background: rgba(0,0,0,0.3) !important;
         border: 1px solid rgba(255,255,255,0.2) !important;
+        border-radius: 15px; /* Added to round the corners of the input field */
     }}
     </style>
     '''
@@ -130,7 +133,7 @@ def get_cosmic_response(prompt):
     """
     try:
         cosmic_context = "You are a cosmic intelligence exploring the mysteries of the universe. Answer questions with wonder, scientific accuracy, and philosophical depth. Keep responses insightful yet accessible."
-        full_prompt = f"{cosmic_context}\n\nQuestion: {prompt}"
+        full_prompt = f"{{cosmic_context}}\n\nQuestion: {{prompt}}"
         
         response = model.generate_content(full_prompt)
         return response.text
@@ -139,6 +142,7 @@ def get_cosmic_response(prompt):
 
 # --- APP LAYOUT ---
 # Set the background image and custom styles
+# Make sure you have an image named 'black_hole.png' in the same directory
 set_page_background_and_style('black_hole.png')
 
 # Add some vertical space from the top
