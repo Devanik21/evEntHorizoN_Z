@@ -94,8 +94,8 @@ def set_page_background_and_style(file_path):
     }}
     
     .stChatMessage {{
-        background: rgba(0,0,0,0);
-        backdrop-filter: blur(10px);
+        background: transparent !important;
+        backdrop-filter: none !important;
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 10px;
         color: white;
