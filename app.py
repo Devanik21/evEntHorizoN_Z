@@ -142,8 +142,8 @@ def set_page_background_and_style(file_path):
     }}
     
     button {{
-        background: rgba(138,43,226,0.3) !important;
-        border: 1px solid rgba(138,43,226,0.5) !important;
+        background: rgba(138,43,226,0) !important;
+        border: 1px solid rgba(138,43,226,0) !important;
         color: white !important;
         border-radius: 8px !important;
     }}
