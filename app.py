@@ -39,7 +39,7 @@ def set_page_background_and_style(file_path):
     css_text = f'''
     <style>
     /* --- Main App Background --- */
-    [data-testid="stAppViewContainer"] > .main {{
+    .stApp {{
         background-image: url("data:image/png;base64,{base64_img}");
         background-size: cover;
         background-position: center center;
@@ -47,8 +47,8 @@ def set_page_background_and_style(file_path):
         background-attachment: fixed;
     }}
 
-    /* --- Make Streamlit components transparent --- */
-    [data-testid="stHeader"], [data-testid="stToolbar"] {{
+    /* --- Make Streamlit header transparent --- */
+    [data-testid="stHeader"] {{
         background: rgba(0,0,0,0);
     }}
 
@@ -76,13 +76,6 @@ def set_page_background_and_style(file_path):
         letter-spacing: 1.2px;
     }}
 
-    /* --- Center Image Style --- */
-    .main-image {{
-        border-radius: 16px;
-        box-shadow: 0px 0px 40px rgba(255,255,255,0.15);
-        border: 1px solid rgba(255,255,255,0.1);
-    }}
-
     /* --- Footer Style --- */
     .footer {{
         font-size: 0.9rem;
@@ -103,25 +96,23 @@ def set_page_background_and_style(file_path):
 # IMPORTANT: Make sure 'black_hole.png' is in the same folder as your script.
 set_page_background_and_style('black_hole.png')
 
+# Add some vertical space from the top
+st.markdown("<br>", unsafe_allow_html=True)
+
 # Title Section
 st.markdown("""
 <h1 class='mystic'>Grok</h1>
 <h2 class='subtitle'>Understand the universe</h2>
 """, unsafe_allow_html=True)
 
-# Display the mysterious cosmic image in the center
-# This is now optional since it's the background, but it can serve as a nice focal point.
-try:
-    image = Image.open('black_hole.png')
-    st.image(image, caption=None, use_column_width=True, output_format='PNG')
-    # Applying a class to the image doesn't work directly with st.image,
-    # the style is applied generally in the CSS block above.
-except FileNotFoundError:
-    # A warning will be displayed by the background function if the file is missing.
-    pass
+# The image is now the background, so we don't need to display it in the body anymore.
+
+# Add more vertical space before the footer
+st.markdown("<br><br>", unsafe_allow_html=True)
 
 # Footer Section
 st.markdown("""
 <hr>
 <p class='footer'>A voyage into cosmic intelligence ⚫</p>
 """, unsafe_allow_html=True)
+
