@@ -7,6 +7,9 @@ import io
 import PyPDF2
 import docx
 from pathlib import Path
+import json
+from datetime import datetime
+from tinydb import TinyDB, Query
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Understand the Universe", page_icon="🌌", layout="centered")
@@ -14,9 +17,84 @@ st.set_page_config(page_title="Understand the Universe", page_icon="🌌", layou
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemma-3n-e4b-it')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
+
+# --- DATABASE FUNCTIONS ---
+def init_database():
+    """Initialize TinyDB database for chat history."""
+    db = TinyDB('cosmic_chats.json')
+    return db
+
+def create_new_session(db, session_name=None):
+    """Create a new chat session."""
+    if session_name is None:
+        session_name = f"Cosmic Chat {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    
+    sessions_table = db.table('sessions')
+    session_id = sessions_table.insert({
+        'session_name': session_name,
+        'created_at': datetime.now().isoformat(),
+        'messages': []
+    })
+    return session_id
+
+def get_all_sessions(db):
+    """Get all chat sessions."""
+    sessions_table = db.table('sessions')
+    sessions = sessions_table.all()
+    # Sort by created_at descending
+    sessions.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+    return sessions
+
+def save_message(db, session_id, role, content, files=None):
+    """Save a message to the database."""
+    sessions_table = db.table('sessions')
+    Session = Query()
+    
+    session = sessions_table.get(doc_id=session_id)
+    if session:
+        message = {
+            'role': role,
+            'content': content,
+            'timestamp': datetime.now().isoformat()
+        }
+        if files:
+            message['files'] = files
+        
+        messages = session.get('messages', [])
+        messages.append(message)
+        sessions_table.update({'messages': messages}, doc_ids=[session_id])
+
+def load_session_messages(db, session_id):
+    """Load all messages for a session."""
+    sessions_table = db.table('sessions')
+    session = sessions_table.get(doc_id=session_id)
+    
+    if session:
+        messages = []
+        for msg in session.get('messages', []):
+            message = {
+                'role': msg['role'],
+                'content': msg['content']
+            }
+            if 'files' in msg:
+                message['files'] = msg['files']
+            messages.append(message)
+        return messages
+    return []
+
+def delete_session(db, session_id):
+    """Delete a chat session."""
+    sessions_table = db.table('sessions')
+    sessions_table.remove(doc_ids=[session_id])
+
+def get_session_name(db, session_id):
+    """Get session name by ID."""
+    sessions_table = db.table('sessions')
+    session = sessions_table.get(doc_id=session_id)
+    return session.get('session_name', 'Unknown') if session else 'Unknown'
 
 # --- FUNCTIONS ---
 def get_base64_of_bin_file(bin_file):
@@ -77,12 +155,24 @@ def set_page_background_and_style(file_path):
         border: 1px solid rgba(255,255,255,0.1) !important;
         border-radius: 8px !important;
         transition: all 0.3s ease !important;
+        box-shadow: none !important;
     }}
     
     textarea:hover, input:hover,
     textarea:focus, input:focus {{
         border-color: rgba(255,255,255,0.3) !important;
         box-shadow: 0 0 15px rgba(255,255,255,0.1) !important;
+        background: transparent !important;
+    }}
+    
+    /* Force text area transparency */
+    .stTextArea textarea {{
+        background-color: transparent !important;
+        background: transparent !important;
+    }}
+    
+    .stTextArea > div > div {{
+        background: transparent !important;
     }}
     
     /* White text everywhere */
@@ -133,6 +223,26 @@ def set_page_background_and_style(file_path):
     
     .file-badge:hover {{
         background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.4);
+    }}
+    
+    /* Session badges */
+    .session-item {{
+        padding: 8px 12px;
+        margin: 5px 0;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }}
+    
+    .session-item:hover {{
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.3);
+    }}
+    
+    .session-item.active {{
+        background: rgba(255,255,255,0.15);
         border-color: rgba(255,255,255,0.4);
     }}
     
@@ -206,6 +316,16 @@ def set_page_background_and_style(file_path):
     ::-webkit-scrollbar-thumb:hover {{
         background: rgba(255,255,255,0.3);
     }}
+    
+    /* Selectbox */
+    .stSelectbox {{
+        background: transparent !important;
+    }}
+    
+    .stSelectbox > div > div {{
+        background: transparent !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+    }}
     </style>
     '''
     st.markdown(css_text, unsafe_allow_html=True)
@@ -278,7 +398,12 @@ def get_cosmic_response(prompt, file_content=None, file_type=None):
 # --- APP LAYOUT ---
 set_page_background_and_style('black_hole.png')
 
+# Initialize database
+db = init_database()
+
 # Initialize session state
+if "current_session_id" not in st.session_state:
+    st.session_state.current_session_id = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -298,7 +423,59 @@ st.markdown("""
 
 # Sidebar with chat interface
 with st.sidebar:
+    st.markdown("### 🌌 Chat Sessions")
+    
+    # New chat button
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        if st.button("✨ New Chat", use_container_width=True):
+            new_session_id = create_new_session(db)
+            st.session_state.current_session_id = new_session_id
+            st.session_state.messages = []
+            st.rerun()
+    
+    with col2:
+        if st.button("🔄", use_container_width=True):
+            st.rerun()
+    
+    # Load existing sessions
+    sessions = get_all_sessions(db)
+    
+    if sessions:
+        st.markdown("---")
+        st.markdown("#### History")
+        
+        for session in sessions[:10]:  # Show last 10 sessions
+            session_id = session.doc_id
+            session_name = session.get('session_name', 'Unnamed Chat')
+            
+            col1, col2 = st.columns([4, 1])
+            
+            with col1:
+                if st.button(
+                    f"💬 {session_name}",
+                    key=f"load_{session_id}",
+                    use_container_width=True
+                ):
+                    st.session_state.current_session_id = session_id
+                    st.session_state.messages = load_session_messages(db, session_id)
+                    st.rerun()
+            
+            with col2:
+                if st.button("🗑️", key=f"delete_{session_id}"):
+                    delete_session(db, session_id)
+                    if st.session_state.current_session_id == session_id:
+                        st.session_state.current_session_id = None
+                        st.session_state.messages = []
+                    st.rerun()
+    
+    st.markdown("---")
     st.markdown("### 🔮 Cosmic Chat")
+    
+    # Show current session name
+    if st.session_state.current_session_id:
+        current_name = get_session_name(db, st.session_state.current_session_id)
+        st.caption(f"Current: {current_name}")
     
     # File uploader
     uploaded_files = st.file_uploader(
@@ -328,6 +505,10 @@ with st.sidebar:
     send_button = st.button("🪄 Send", use_container_width=True)
     
     if send_button and prompt:
+        # Create new session if none exists
+        if st.session_state.current_session_id is None:
+            st.session_state.current_session_id = create_new_session(db)
+        
         # Process uploaded files
         file_contents = []
         file_names = []
@@ -344,6 +525,15 @@ with st.sidebar:
         if file_names:
             user_message["files"] = file_names
         st.session_state.messages.append(user_message)
+        
+        # Save to database
+        save_message(
+            db,
+            st.session_state.current_session_id,
+            "user",
+            prompt,
+            file_names if file_names else None
+        )
         
         # Generate response
         combined_text = ""
@@ -366,6 +556,14 @@ with st.sidebar:
         
         # Add assistant response
         st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        # Save to database
+        save_message(
+            db,
+            st.session_state.current_session_id,
+            "assistant",
+            response
+        )
         
         # Rerun to update chat
         st.rerun()
