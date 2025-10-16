@@ -72,10 +72,15 @@ def set_page_background_and_style(file_path):
         border: none !important;
     }}
     
-    .stChatFloatingInputContainer {{
+    .stChatFloatingInputContainer {
+        background: rgba(0,0,0,0.0) !important;
+        box-shadow: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    .stChatFloatingInputContainer::before {
         background: transparent !important;
-        border: none !important;
-    }}
+    }
     
     [data-testid="stBottom"] {{
         background: transparent !important;
