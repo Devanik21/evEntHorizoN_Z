@@ -77,24 +77,12 @@ def set_page_background_and_style(file_path):
         border: 1px solid rgba(255,255,255,0.1) !important;
         border-radius: 8px !important;
         transition: all 0.3s ease !important;
-        box-shadow: none !important;
     }}
     
     textarea:hover, input:hover,
     textarea:focus, input:focus {{
         border-color: rgba(255,255,255,0.3) !important;
         box-shadow: 0 0 15px rgba(255,255,255,0.1) !important;
-        background: transparent !important;
-    }}
-    
-    /* Force text area transparency */
-    .stTextArea textarea {{
-        background-color: transparent !important;
-        background: transparent !important;
-    }}
-    
-    .stTextArea > div > div {{
-        background: transparent !important;
     }}
     
     /* White text everywhere */
