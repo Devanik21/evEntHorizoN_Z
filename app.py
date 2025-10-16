@@ -3,6 +3,10 @@ from PIL import Image
 import base64
 import os
 import google.generativeai as genai
+import io
+import PyPDF2
+import docx
+from pathlib import Path
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Understand the Universe", page_icon="🌌", layout="centered")
@@ -10,41 +14,27 @@ st.set_page_config(page_title="Understand the Universe", page_icon="🌌", layou
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemma-3n-e2b-it')
+    model = genai.GenerativeModel('gemini-2.0-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
 # --- FUNCTIONS ---
 def get_base64_of_bin_file(bin_file):
-    """
-    Encodes a binary file to a base64 string.
-    Args:
-        bin_file (str): The path to the binary file.
-    Returns:
-        str: The base64 encoded string.
-    """
+    """Encodes a binary file to a base64 string."""
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
 
 def set_page_background_and_style(file_path):
-    """
-    Sets the background image and applies custom CSS styles.
-    Args:
-        file_path (str): The path to the background image file.
-    """
-    # Check if the file exists to avoid errors
+    """Sets the background image and applies custom CSS styles."""
     if not os.path.exists(file_path):
-        st.error(f"Error: Background image not found at '{file_path}'. Please ensure the image is in the same directory as your script.")
+        st.error(f"Error: Background image not found at '{file_path}'.")
         return
     
-    # Encode the image to base64
     base64_img = get_base64_of_bin_file(file_path)
     
-    # Custom CSS with the base64 image as background
     css_text = f'''
     <style>
-    /* --- Main App Background --- */
     .stApp {{
         background-image: url("data:image/png;base64,{base64_img}");
         background-size: cover;
@@ -53,12 +43,10 @@ def set_page_background_and_style(file_path):
         background-attachment: fixed;
     }}
     
-    /* --- Make Streamlit header transparent --- */
     [data-testid="stHeader"] {{
         background: rgba(0,0,0,0);
     }}
     
-    /* --- General Text and Font Styles --- */
     body, h1, h2, h3, h4, h5, h6 {{
         color: white;
         font-family: 'Inter', sans-serif;
@@ -69,7 +57,6 @@ def set_page_background_and_style(file_path):
         font-weight: 700;
     }}
     
-    /* --- Custom Class Styles --- */
     .subtitle {{
         color: rgba(255,255,255,0.8);
         font-size: 1.3rem;
@@ -82,15 +69,6 @@ def set_page_background_and_style(file_path):
         letter-spacing: 1.2px;
     }}
     
-    /* --- Chat Input Styling --- */
-    .stChatInput {{
-        background: rgba(0,0,0,0.3);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 15px;
-    }}
-    
-    /* --- Chat Message Styling --- */
     .stChatMessage {{
         background: rgba(0,0,0,0.4);
         backdrop-filter: blur(10px);
@@ -99,7 +77,6 @@ def set_page_background_and_style(file_path):
         color: white;
     }}
     
-    /* --- Footer Style --- */
     .footer {{
         font-size: 0.9rem;
         color: rgba(255,255,255,0.4);
@@ -110,38 +87,102 @@ def set_page_background_and_style(file_path):
         border-color: rgba(255,255,255,0.2);
     }}
     
-    /* --- Text Area and Input Styling --- */
     textarea, input {{
         color: white !important;
         background: rgba(0,0,0,0.3) !important;
         border: 1px solid rgba(255,255,255,0.2) !important;
     }}
+    
+    .stFileUploader {{
+        background: rgba(0,0,0,0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 10px;
+        padding: 10px;
+    }}
+    
+    .file-badge {{
+        display: inline-block;
+        background: rgba(138,43,226,0.3);
+        border: 1px solid rgba(138,43,226,0.5);
+        padding: 5px 12px;
+        border-radius: 15px;
+        margin: 5px;
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.9);
+    }}
     </style>
     '''
     st.markdown(css_text, unsafe_allow_html=True)
 
-def get_cosmic_response(prompt):
-    """
-    Generate response using Gemini API with cosmic context.
-    Args:
-        prompt (str): User's question
-    Returns:
-        str: AI-generated response
-    """
+def extract_text_from_pdf(pdf_file):
+    """Extract text from PDF file."""
+    try:
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        return text.strip()
+    except Exception as e:
+        return f"Error reading PDF: {str(e)}"
+
+def extract_text_from_docx(docx_file):
+    """Extract text from DOCX file."""
+    try:
+        doc = docx.Document(docx_file)
+        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+        return text.strip()
+    except Exception as e:
+        return f"Error reading DOCX: {str(e)}"
+
+def extract_text_from_txt(txt_file):
+    """Extract text from TXT file."""
+    try:
+        return txt_file.read().decode('utf-8')
+    except Exception as e:
+        return f"Error reading TXT: {str(e)}"
+
+def process_uploaded_file(uploaded_file):
+    """Process uploaded file and extract content."""
+    try:
+        file_extension = Path(uploaded_file.name).suffix.lower()
+        
+        if file_extension == '.pdf':
+            return extract_text_from_pdf(uploaded_file), "text"
+        elif file_extension == '.docx':
+            return extract_text_from_docx(uploaded_file), "text"
+        elif file_extension == '.txt':
+            return extract_text_from_txt(uploaded_file), "text"
+        elif file_extension in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
+            image = Image.open(uploaded_file)
+            return image, "image"
+        else:
+            return f"Unsupported file type: {file_extension}", "error"
+    except Exception as e:
+        return f"Error processing file: {str(e)}", "error"
+
+def get_cosmic_response(prompt, file_content=None, file_type=None):
+    """Generate response using Gemini API with optional file context."""
     try:
         cosmic_context = "You are a cosmic intelligence exploring the mysteries of the universe. Answer questions with wonder, scientific accuracy, and philosophical depth. Keep responses insightful yet accessible."
-        full_prompt = f"{cosmic_context}\n\nQuestion: {prompt}"
         
-        response = model.generate_content(full_prompt)
+        if file_content and file_type == "text":
+            full_prompt = f"{cosmic_context}\n\nDocument context:\n{file_content}\n\nQuestion: {prompt}"
+            response = model.generate_content(full_prompt)
+        elif file_content and file_type == "image":
+            full_prompt = f"{cosmic_context}\n\nQuestion: {prompt}"
+            response = model.generate_content([full_prompt, file_content])
+        else:
+            full_prompt = f"{cosmic_context}\n\nQuestion: {prompt}"
+            response = model.generate_content(full_prompt)
+        
         return response.text
     except Exception as e:
         return f"✨ The cosmic signals are unclear: {str(e)}"
 
 # --- APP LAYOUT ---
-# Set the background image and custom styles
 set_page_background_and_style('black_hole.png')
 
-# Add some vertical space from the top
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Title Section
@@ -152,34 +193,89 @@ st.markdown("""
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Initialize chat history
+# Initialize session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
+
+# File uploader in sidebar with cosmic styling
+with st.sidebar:
+    st.markdown("### 📎 Cosmic Attachments")
+    uploaded_files = st.file_uploader(
+        "Upload images, PDFs, or documents",
+        type=['pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
+        accept_multiple_files=True,
+        key="file_uploader"
+    )
+    
+    if uploaded_files:
+        st.markdown("#### Attached Files:")
+        for file in uploaded_files:
+            st.markdown(f'<div class="file-badge">📄 {file.name}</div>', unsafe_allow_html=True)
 
 # Display chat messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar="🌌" if message["role"] == "assistant" else "🧑‍🚀"):
         st.markdown(message["content"])
+        if "files" in message and message["files"]:
+            for file_name in message["files"]:
+                st.caption(f"📎 {file_name}")
 
 # Chat input
 if prompt := st.chat_input("Ask the cosmos..."):
+    # Process uploaded files
+    file_contents = []
+    file_names = []
+    
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            content, content_type = process_uploaded_file(uploaded_file)
+            if content_type != "error":
+                file_contents.append((content, content_type))
+                file_names.append(uploaded_file.name)
+    
     # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    user_message = {"role": "user", "content": prompt}
+    if file_names:
+        user_message["files"] = file_names
+    st.session_state.messages.append(user_message)
     
     # Display user message
     with st.chat_message("user", avatar="🧑‍🚀"):
         st.markdown(prompt)
+        if file_names:
+            for file_name in file_names:
+                st.caption(f"📎 {file_name}")
     
     # Generate and display assistant response
     with st.chat_message("assistant", avatar="🌌"):
         with st.spinner("✨ Consulting the cosmic consciousness..."):
-            response = get_cosmic_response(prompt)
+            # Combine file contents for context
+            combined_text = ""
+            image_content = None
+            
+            for content, content_type in file_contents:
+                if content_type == "text":
+                    combined_text += f"\n{content}\n"
+                elif content_type == "image":
+                    image_content = content  # Use last image for vision
+            
+            # Generate response with file context
+            if combined_text and image_content:
+                response = get_cosmic_response(prompt, combined_text, "text")
+            elif image_content:
+                response = get_cosmic_response(prompt, image_content, "image")
+            elif combined_text:
+                response = get_cosmic_response(prompt, combined_text, "text")
+            else:
+                response = get_cosmic_response(prompt)
+            
             st.markdown(response)
     
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
 
-# Add more vertical space before the footer
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 # Footer Section
