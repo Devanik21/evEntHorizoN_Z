@@ -2,4 +2,5 @@ streamlit
 pillow
 google-generativeai
 PyPDF2
-python-docx>
+python-docx
+tinydb
