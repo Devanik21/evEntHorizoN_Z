@@ -46,7 +46,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Display the mysterious cosmic image
-image = Image.open('fa0c79fd-d6e0-4f06-a135-ac8c18f75aef.png')
+image = Image.open('black_hole.png')
 st.image(image, caption=None, use_column_width=True)
 
 # Add a faint footer
