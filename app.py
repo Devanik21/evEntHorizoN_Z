@@ -126,11 +126,11 @@ def set_page_background_and_style(file_path):
     }}
     
     .stFileUploader {{
-        background: rgba(0,0,0,0.3);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 10px;
-        padding: 10px;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        border: 1px solid rgba(255,255,255,0);
+        border-radius: 1px;
+        padding: 1px;
     }}
     
     .file-badge {{
