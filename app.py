@@ -99,7 +99,7 @@ def set_page_background_and_style(file_path):
     .stChatMessage {{
         background: transparent !important;
         backdrop-filter: none !important;
-        border: 1px solid rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0);
         border-radius: 10px;
         color: white;
     }}
