@@ -14,7 +14,7 @@ st.set_page_config(page_title="Understand the Universe", page_icon="🌌", layou
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemma-3n-e4b-it')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
