@@ -12,7 +12,7 @@ from datetime import datetime
 from tinydb import TinyDB, Query
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Z", page_icon="♾️", layout="centered")
+st.set_page_config(page_title="", page_icon="♾️", layout="centered")
 
 # --- CONFIGURE GEMINI API ---
 try:
