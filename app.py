@@ -155,14 +155,8 @@ def set_page_background_and_style(file_path):
         border-radius: 15px;
         margin: 5px;
         font-size: 0.9rem;
+        color: white;
         transition: all 0.3s ease;
-    }}
-    
-    .file-badge {{
-        background: linear-gradient(135deg, #ffffff, #d0d0d0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
     }}
     
     .file-badge:hover {{
