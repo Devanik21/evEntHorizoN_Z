@@ -62,34 +62,13 @@ def set_page_background_and_style(file_path):
         background: transparent !important;
     }}
     
-    /* Remove black box at bottom */
+    /* Remove all bottom containers */
     [data-testid="stBottomBlockContainer"] {{
-        background: transparent !important;
+        display: none !important;
     }}
     
     [data-testid="stChatInputContainer"] {{
         background: transparent !important;
-        border: none !important;
-    }}
-    
-    .stChatFloatingInputContainer {{
-        background: rgba(0,0,0,0.0) !important;
-        box-shadow: none !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }}
-    
-    .stChatFloatingInputContainer::before {{
-        background: transparent !important;
-    }}
-    
-    [data-testid="stBottom"] {{
-        background: transparent !important;
-    }}
-    
-    [data-testid="stChatInput"] {{
-        background: rgba(0,0,0,0.3) !important;
-        backdrop-filter: blur(10px) !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
     }}
     
     body, h1, h2, h3, h4, h5, h6 {{
@@ -136,6 +115,11 @@ def set_page_background_and_style(file_path):
         color: white !important;
         background: rgba(0,0,0,0.3) !important;
         border: 1px solid rgba(255,255,255,0.2) !important;
+        border-radius: 10px !important;
+    }}
+    
+    .stTextArea, .stTextInput {{
+        background: transparent !important;
     }}
     
     .stFileUploader {{
@@ -155,6 +139,17 @@ def set_page_background_and_style(file_path):
         margin: 5px;
         font-size: 0.9rem;
         color: rgba(255,255,255,0.9);
+    }}
+    
+    button {{
+        background: rgba(138,43,226,0.3) !important;
+        border: 1px solid rgba(138,43,226,0.5) !important;
+        color: white !important;
+        border-radius: 8px !important;
+    }}
+    
+    button:hover {{
+        background: rgba(138,43,226,0.5) !important;
     }}
     </style>
     '''
@@ -228,103 +223,94 @@ def get_cosmic_response(prompt, file_content=None, file_type=None):
 # --- APP LAYOUT ---
 set_page_background_and_style('black_hole.png')
 
-st.markdown("<br>", unsafe_allow_html=True)
+# Initialize session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# Title Section
+# Main content area - just the title
+st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
 <h1 class='mystic'>♾️</h1>
 <h2 class='subtitle'>Understand the universe</h2>
 """, unsafe_allow_html=True)
+st.markdown("<br><br>", unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
+# Footer in main area
+st.markdown("""
+<hr>
+<p class='footer'>A voyage into cosmic intelligence ✨</p>
+""", unsafe_allow_html=True)
 
-# Initialize session state
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "uploaded_files" not in st.session_state:
-    st.session_state.uploaded_files = []
-
-# File uploader in sidebar with cosmic styling
+# Sidebar with chat interface
 with st.sidebar:
-    st.markdown("### 📎 Cosmic Attachments")
+    st.markdown("### 🌌 Cosmic Chat")
+    
+    # File uploader
     uploaded_files = st.file_uploader(
-        "Upload images, PDFs, or documents",
+        "📎 Attach files",
         type=['pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
         accept_multiple_files=True,
         key="file_uploader"
     )
     
     if uploaded_files:
-        st.markdown("#### Attached Files:")
+        st.markdown("#### Attached:")
         for file in uploaded_files:
             st.markdown(f'<div class="file-badge">📄 {file.name}</div>', unsafe_allow_html=True)
-
-# Display chat messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar="🌌" if message["role"] == "assistant" else "🧑‍🚀"):
-        st.markdown(message["content"])
-        if "files" in message and message["files"]:
-            for file_name in message["files"]:
-                st.caption(f"📎 {file_name}")
-
-# Chat input
-if prompt := st.chat_input("Ask the cosmos..."):
-    # Process uploaded files
-    file_contents = []
-    file_names = []
     
-    if uploaded_files:
-        for uploaded_file in uploaded_files:
-            content, content_type = process_uploaded_file(uploaded_file)
-            if content_type != "error":
-                file_contents.append((content, content_type))
-                file_names.append(uploaded_file.name)
+    st.markdown("---")
     
-    # Add user message to chat history
-    user_message = {"role": "user", "content": prompt}
-    if file_names:
-        user_message["files"] = file_names
-    st.session_state.messages.append(user_message)
+    # Display chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"], avatar="🌌" if message["role"] == "assistant" else "🧑‍🚀"):
+            st.markdown(message["content"])
+            if "files" in message and message["files"]:
+                for file_name in message["files"]:
+                    st.caption(f"📎 {file_name}")
     
-    # Display user message
-    with st.chat_message("user", avatar="🧑‍🚀"):
-        st.markdown(prompt)
+    # Chat input in sidebar
+    prompt = st.text_area("Ask the cosmos...", key="chat_input", height=100)
+    send_button = st.button("🚀 Send", use_container_width=True)
+    
+    if send_button and prompt:
+        # Process uploaded files
+        file_contents = []
+        file_names = []
+        
+        if uploaded_files:
+            for uploaded_file in uploaded_files:
+                content, content_type = process_uploaded_file(uploaded_file)
+                if content_type != "error":
+                    file_contents.append((content, content_type))
+                    file_names.append(uploaded_file.name)
+        
+        # Add user message
+        user_message = {"role": "user", "content": prompt}
         if file_names:
-            for file_name in file_names:
-                st.caption(f"📎 {file_name}")
-    
-    # Generate and display assistant response
-    with st.chat_message("assistant", avatar="🌌"):
-        with st.spinner("✨ Consulting the cosmic consciousness..."):
-            # Combine file contents for context
-            combined_text = ""
-            image_content = None
-            
-            for content, content_type in file_contents:
-                if content_type == "text":
-                    combined_text += f"\n{content}\n"
-                elif content_type == "image":
-                    image_content = content  # Use last image for vision
-            
-            # Generate response with file context
-            if combined_text and image_content:
-                response = get_cosmic_response(prompt, combined_text, "text")
-            elif image_content:
-                response = get_cosmic_response(prompt, image_content, "image")
-            elif combined_text:
-                response = get_cosmic_response(prompt, combined_text, "text")
-            else:
-                response = get_cosmic_response(prompt)
-            
-            st.markdown(response)
-    
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
-st.markdown("<br><br>", unsafe_allow_html=True)
-
-# Footer Section
-st.markdown("""
-<hr>
-<p class='footer'>A voyage into cosmic intelligence ✨</p>
-""", unsafe_allow_html=True)
+            user_message["files"] = file_names
+        st.session_state.messages.append(user_message)
+        
+        # Generate response
+        combined_text = ""
+        image_content = None
+        
+        for content, content_type in file_contents:
+            if content_type == "text":
+                combined_text += f"\n{content}\n"
+            elif content_type == "image":
+                image_content = content
+        
+        if combined_text and image_content:
+            response = get_cosmic_response(prompt, combined_text, "text")
+        elif image_content:
+            response = get_cosmic_response(prompt, image_content, "image")
+        elif combined_text:
+            response = get_cosmic_response(prompt, combined_text, "text")
+        else:
+            response = get_cosmic_response(prompt)
+        
+        # Add assistant response
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        # Rerun to update chat
+        st.rerun()
