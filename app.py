@@ -133,13 +133,7 @@ def set_page_background_and_style(file_path):
     /* Transparent chat messages */
     .stChatMessage {{
         background: transparent !important;
-    }}
-    
-    .stChatMessage * {{
-        background: linear-gradient(135deg, #ffffff, #e0e0e0) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        background-clip: text !important;
+        color: white !important;
     }}
     
     .stChatMessage [data-testid="chatAvatarIcon"] {{
