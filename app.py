@@ -243,7 +243,7 @@ st.markdown("""
 
 # Sidebar with chat interface
 with st.sidebar:
-    st.markdown("### 🌌 Cosmic Chat")
+    st.markdown("###🔮 Cosmic Chat")
     
     # File uploader
     uploaded_files = st.file_uploader(
@@ -270,7 +270,7 @@ with st.sidebar:
     
     # Chat input in sidebar
     prompt = st.text_area("Ask the cosmos...", key="chat_input", height=100)
-    send_button = st.button("🚀 Send", use_container_width=True)
+    send_button = st.button("🪄 Send", use_container_width=True)
     
     if send_button and prompt:
         # Process uploaded files
