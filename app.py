@@ -116,9 +116,8 @@ def set_page_background_and_style(file_path):
     
     textarea, input {{
         color: white !important;
-        background: rgba(0,0,0,0.3) !important;
+        background: transparent !important; /* Changed this line */
         border: 1px solid rgba(255,255,255,0.2) !important;
-        border-radius: 10px !important;
     }}
     
     .stTextArea, .stTextInput {{
@@ -141,7 +140,7 @@ def set_page_background_and_style(file_path):
         border-radius: 15px;
         margin: 5px;
         font-size: 0.9rem;
-        color: rgba(255,255,255,0.9);
+        color: rgba(255,255,255,0);
     }}
     
     button {{
