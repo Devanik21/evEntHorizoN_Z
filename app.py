@@ -43,115 +43,164 @@ def set_page_background_and_style(file_path):
         background-attachment: fixed;
     }}
     
-    [data-testid="stHeader"] {{
-        background: rgba(0,0,0,0);
-    }}
-    
-    /* Transparent sidebar */
-    [data-testid="stSidebar"] {{
+    /* Complete transparency for all containers */
+    [data-testid="stHeader"],
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"] > div,
+    [data-testid="stSidebarContent"],
+    [data-testid="stBottomBlockContainer"],
+    [data-testid="stChatInputContainer"],
+    [data-testid="stFileUploader"],
+    [data-testid="stFileUploaderDropzone"],
+    [data-testid="stFileUploaderDropzoneInstructions"],
+    .stTextArea,
+    .stTextInput,
+    .stChatMessage,
+    [data-testid="stChatMessageContent"],
+    .element-container,
+    .stMarkdown,
+    section[data-testid="stSidebar"] {{
         background: transparent !important;
         backdrop-filter: none !important;
-        border-right: 1px solid rgba(255,255,255,0.05);
+        border: none !important;
     }}
     
-    [data-testid="stSidebar"] > div {{
+    /* Remove all borders */
+    [data-testid="stSidebar"] {{
+        border-right: none !important;
+    }}
+    
+    /* Transparent inputs with subtle hover */
+    textarea, input {{
+        color: white !important;
         background: transparent !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
     }}
     
-    [data-testid="stSidebarContent"] {{
-        background: transparent !important;
+    textarea:hover, input:hover,
+    textarea:focus, input:focus {{
+        border-color: rgba(255,255,255,0.3) !important;
+        box-shadow: 0 0 15px rgba(255,255,255,0.1) !important;
     }}
     
-    /* Remove all bottom containers */
-    [data-testid="stBottomBlockContainer"] {{
-        display: none !important;
-    }}
-    
-    [data-testid="stChatInputContainer"] {{
-        background: transparent !important; /* Makes the box see-through */
-        backdrop-filter: none !important; /* Removes the glass effect */
-        border: 1px solid rgba(255,255,255,0.2) !important;
-    }}
-    
-    
-    body, h1, h2, h3, h4, h5, h6 {{
-        color: white;
+    /* White text everywhere */
+    body, h1, h2, h3, h4, h5, h6, p, div, span, label, .stMarkdown {{
+        color: white !important;
         font-family: 'Inter', sans-serif;
-        text-align: center;
     }}
     
     h1, h2, h3, h4, h5, h6 {{
         font-weight: 700;
+        text-align: center;
     }}
     
     .subtitle {{
-        color: rgba(255,255,255,0.8);
+        color: rgba(255,255,255,0.9);
         font-size: 1.3rem;
         margin-top: -10px;
         letter-spacing: 0.5px;
     }}
     
     .mystic {{
-        text-shadow: 0 0 20px rgba(255,255,255,0.4);
-        letter-spacing: 1.2px;
+        text-shadow: 0 0 30px rgba(255,255,255,0.6);
+        letter-spacing: 1.5px;
     }}
     
+    /* Transparent chat messages */
     .stChatMessage {{
         background: transparent !important;
-        backdrop-filter: none !important;
-        border: 1px solid rgba(255,255,255,0);
-        border-radius: 10px;
-        color: white;
-    }}
-    
-    .footer {{
-        font-size: 0.9rem;
-        color: rgba(255,255,255,0.4);
-    }}
-    
-    hr {{
-        opacity: 0.1;
-        border-color: rgba(255,255,255,0.2);
-    }}
-    
-    textarea, input {{
         color: white !important;
-        background: transparent !important; /* Changed this line */
-        border: 1px solid rgba(255,255,255,0.2) !important;
     }}
     
-    .stTextArea, .stTextInput {{
+    .stChatMessage [data-testid="chatAvatarIcon"] {{
         background: transparent !important;
     }}
     
-    .stFileUploader {{
-        background: transparent !important;
-        backdrop-filter: none !important;
-        border: 1px solid rgba(255,255,255,0);
-        border-radius: 1px;
-        padding: 1px;
-    }}
-    
+    /* File badges - minimal glass effect */
     .file-badge {{
         display: inline-block;
-        background: rgba(138,43,226,0.3);
-        border: 1px solid rgba(138,43,226,0.5);
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.2);
         padding: 5px 12px;
         border-radius: 15px;
         margin: 5px;
         font-size: 0.9rem;
-        color: rgba(255,255,255,0);
+        color: white;
+        transition: all 0.3s ease;
     }}
     
+    .file-badge:hover {{
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.4);
+    }}
+    
+    /* Transparent buttons with glow on hover */
     button {{
-        background: rgba(138,43,226,0) !important;
-        border: 1px solid rgba(138,43,226,0) !important;
+        background: transparent !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
         color: white !important;
         border-radius: 8px !important;
+        transition: all 0.3s ease !important;
     }}
     
     button:hover {{
-        background: rgba(138,43,226,0.5) !important;
+        background: rgba(255,255,255,0.1) !important;
+        border-color: rgba(255,255,255,0.4) !important;
+        box-shadow: 0 0 20px rgba(255,255,255,0.2) !important;
+    }}
+    
+    /* Footer styling */
+    .footer {{
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.6);
+        text-align: center;
+    }}
+    
+    hr {{
+        opacity: 0.2;
+        border-color: rgba(255,255,255,0.2);
+    }}
+    
+    /* File uploader specific */
+    .stFileUploader label {{
+        color: white !important;
+    }}
+    
+    .stFileUploader section {{
+        background: transparent !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 8px !important;
+    }}
+    
+    .stFileUploader section:hover {{
+        border-color: rgba(255,255,255,0.3) !important;
+    }}
+    
+    /* Caption text */
+    .stCaptionContainer, small {{
+        color: rgba(255,255,255,0.7) !important;
+    }}
+    
+    /* Placeholder text */
+    ::placeholder {{
+        color: rgba(255,255,255,0.4) !important;
+    }}
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {{
+        width: 8px;
+        background: transparent;
+    }}
+    
+    ::-webkit-scrollbar-thumb {{
+        background: rgba(255,255,255,0.2);
+        border-radius: 4px;
+    }}
+    
+    ::-webkit-scrollbar-thumb:hover {{
+        background: rgba(255,255,255,0.3);
     }}
     </style>
     '''
