@@ -68,8 +68,11 @@ def set_page_background_and_style(file_path):
     }}
     
     [data-testid="stChatInputContainer"] {{
-        background: transparent !important;
+        background: transparent !important; /* Makes the box see-through */
+        backdrop-filter: none !important; /* Removes the glass effect */
+        border: 1px solid rgba(255,255,255,0.2) !important;
     }}
+    
     
     body, h1, h2, h3, h4, h5, h6 {{
         color: white;
