@@ -243,7 +243,7 @@ st.markdown("""
 
 # Sidebar with chat interface
 with st.sidebar:
-    st.markdown("###🔮 Cosmic Chat")
+    st.markdown("### 🔮 Cosmic Chat")
     
     # File uploader
     uploaded_files = st.file_uploader(
