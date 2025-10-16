@@ -68,6 +68,21 @@ def set_page_background_and_style(file_path):
         border: none !important;
     }}
     
+    .stChatFloatingInputContainer {{
+        background: transparent !important;
+        border: none !important;
+    }}
+    
+    [data-testid="stBottom"] {{
+        background: transparent !important;
+    }}
+    
+    [data-testid="stChatInput"] {{
+        background: rgba(0,0,0,0.3) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+    }}
+    
     body, h1, h2, h3, h4, h5, h6 {{
         color: white;
         font-family: 'Inter', sans-serif;
@@ -202,7 +217,7 @@ def get_cosmic_response(prompt, file_content=None, file_type=None):
         return f"✨ The cosmic signals are unclear: {str(e)}"
 
 # --- APP LAYOUT ---
-set_page_background_and_style('black_hole (1).png')
+set_page_background_and_style('black_hole.png')
 
 st.markdown("<br>", unsafe_allow_html=True)
 
