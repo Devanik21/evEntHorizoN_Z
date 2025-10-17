@@ -3,13 +3,17 @@ from PIL import Image
 import base64
 import os
 import google.generativeai as genai
-import io
 import PyPDF2
 import docx
 from pathlib import Path
 import json
 from datetime import datetime
 from tinydb import TinyDB, Query
+import io
+
+# --- ADVANCED FEATURE IMPORTS (install with pip) ---
+from gtts import gTTS  # For Text-to-Speech: pip install gTTS
+from speech_to_text import speech_to_text # For Speech-to-Text: pip install streamlit-speech-to-text
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="centered")
@@ -17,7 +21,7 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash') # Using 1.5 for better multi-modal
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -50,7 +54,7 @@ def get_all_sessions(db):
 
 def save_message(db, session_id, role, content, files=None):
     """Save a message to the database."""
-    sessions_table = db.table('sessions')
+    sessions_table = db.table('sessions') 
     Session = Query()
     
     session = sessions_table.get(doc_id=session_id)
@@ -66,6 +70,7 @@ def save_message(db, session_id, role, content, files=None):
         messages = session.get('messages', [])
         messages.append(message)
         sessions_table.update({'messages': messages}, doc_ids=[session_id])
+        return message
 
 def load_session_messages(db, session_id):
     """Load all messages for a session."""
@@ -77,7 +82,8 @@ def load_session_messages(db, session_id):
         for msg in session.get('messages', []):
             message = {
                 'role': msg['role'],
-                'content': msg['content']
+                'content': msg['content'],
+                'timestamp': msg.get('timestamp', datetime.now().isoformat()) # Add timestamp for TTS key
             }
             if 'files' in msg:
                 message['files'] = msg['files']
@@ -376,20 +382,20 @@ def process_uploaded_file(uploaded_file):
     except Exception as e:
         return f"Error processing file: {str(e)}", "error"
 
-def get_cosmic_response(prompt, file_content=None, file_type=None):
-    """Generate response using Gemini API with optional file context."""
+def get_cosmic_response(prompt, parts=None):
+    """Generate response using Gemini API with multi-modal context."""
     try:
         cosmic_context = "You are a cosmic intelligence exploring the mysteries of the universe. Answer questions with wonder, scientific accuracy, and philosophical depth. Keep responses insightful yet accessible."
         
-        if file_content and file_type == "text":
-            full_prompt = f"{cosmic_context}\n\nDocument context:\n{file_content}\n\nQuestion: {prompt}"
-            response = model.generate_content(full_prompt)
-        elif file_content and file_type == "image":
-            full_prompt = f"{cosmic_context}\n\nQuestion: {prompt}"
-            response = model.generate_content([full_prompt, file_content])
-        else:
-            full_prompt = f"{cosmic_context}\n\nQuestion: {prompt}"
-            response = model.generate_content(full_prompt)
+        # Construct the full request
+        request_parts = [cosmic_context, "\n\n---", f"\n\n**User's Query:** {prompt}"]
+        
+        if parts:
+            # Prepend a header for the file contexts
+            request_parts.append("\n\n**Attached Context:**\n")
+            request_parts.extend(parts)
+
+        response = model.generate_content(request_parts)
         
         return response.text
     except Exception as e:
@@ -398,14 +404,13 @@ def get_cosmic_response(prompt, file_content=None, file_type=None):
 # --- APP LAYOUT ---
 set_page_background_and_style('black_hole (1).png')
 
-# Initialize database
-db = init_database()
-
 # Initialize session state
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "audio_to_play" not in st.session_state:
+    st.session_state.audio_to_play = None
 
 # Main content area - just the title
 st.markdown("<br>", unsafe_allow_html=True)
@@ -494,76 +499,111 @@ with st.sidebar:
     
     # Display chat messages
     for message in st.session_state.messages:
-        with st.chat_message(message["role"], avatar="🌌" if message["role"] == "assistant" else "🧑‍🚀"):
-            st.markdown(message["content"])
+        avatar = "🌌" if message["role"] == "assistant" else "🧑‍🚀"
+        with st.chat_message(message["role"], avatar=avatar):
+            if message["role"] == "assistant":
+                col1, col2 = st.columns([10, 1])
+                with col1:
+                    st.markdown(message["content"])
+                with col2:
+                    if st.button("🔊", key=f"play_{message['timestamp']}", help="Read aloud"):
+                        st.session_state.audio_to_play = message['content']
+                        st.rerun()
+            else:
+                st.markdown(message["content"])
+
             if "files" in message and message["files"]:
                 for file_name in message["files"]:
                     st.caption(f"📎 {file_name}")
     
     # Chat input in sidebar
-    prompt = st.text_area("Ask the cosmos...", key="chat_input", height=100)
+    st.markdown("---")
+    
+    # Speech-to-Text and Text Input
+    col1, col2 = st.columns([1, 6])
+    with col1:
+        speech_text = speech_to_text(
+            language='en',
+            start_prompt="🎤",
+            stop_prompt="🛑",
+            key='speech_input',
+            use_container_width=True,
+            just_once=True
+        )
+    with col2:
+        prompt = st.text_area("Ask the cosmos...", key="chat_input", height=100, label_visibility="collapsed")
+
+    if speech_text:
+        st.session_state.chat_input = speech_text
+        st.rerun()
+
     send_button = st.button("🪄 Send", use_container_width=True)
     
     if send_button and prompt:
         # Create new session if none exists
         if st.session_state.current_session_id is None:
             st.session_state.current_session_id = create_new_session(db)
-        
+
         # Process uploaded files
-        file_contents = []
         file_names = []
+        gemini_parts = []
         
         if uploaded_files:
             for uploaded_file in uploaded_files:
                 content, content_type = process_uploaded_file(uploaded_file)
                 if content_type != "error":
-                    file_contents.append((content, content_type))
                     file_names.append(uploaded_file.name)
+                    if content_type == "text":
+                        gemini_parts.append(f"--- Document: {uploaded_file.name} ---\n{content}\n")
+                    elif content_type == "image":
+                        gemini_parts.append(f"--- Image: {uploaded_file.name} ---")
+                        gemini_parts.append(content)
         
-        # Add user message
-        user_message = {"role": "user", "content": prompt}
-        if file_names:
-            user_message["files"] = file_names
-        st.session_state.messages.append(user_message)
-        
-        # Save to database
-        save_message(
+        # Save user message to DB and add to session state
+        user_message = save_message(
             db,
             st.session_state.current_session_id,
             "user",
             prompt,
             file_names if file_names else None
         )
+        if user_message:
+            st.session_state.messages.append(user_message)
         
         # Generate response
-        combined_text = ""
-        image_content = None
-        
-        for content, content_type in file_contents:
-            if content_type == "text":
-                combined_text += f"\n{content}\n"
-            elif content_type == "image":
-                image_content = content
-        
-        if combined_text and image_content:
-            response = get_cosmic_response(prompt, combined_text, "text")
-        elif image_content:
-            response = get_cosmic_response(prompt, image_content, "image")
-        elif combined_text:
-            response = get_cosmic_response(prompt, combined_text, "text")
-        else:
-            response = get_cosmic_response(prompt)
+        response = get_cosmic_response(prompt, parts=gemini_parts)
         
         # Add assistant response
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        
-        # Save to database
-        save_message(
+        assistant_message = save_message(
             db,
             st.session_state.current_session_id,
             "assistant",
             response
         )
+        if assistant_message:
+            st.session_state.messages.append(assistant_message)
         
         # Rerun to update chat
         st.rerun()
+
+    # Hidden audio player for Text-to-Speech
+    if st.session_state.audio_to_play:
+        try:
+            tts = gTTS(text=st.session_state.audio_to_play, lang='en', slow=False)
+            audio_fp = io.BytesIO()
+            tts.write_to_fp(audio_fp)
+            audio_fp.seek(0)
+            
+            audio_bytes = audio_fp.read()
+            audio_base64 = base64.b64encode(audio_bytes).decode()
+            audio_html = f"""
+                <audio autoplay>
+                    <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mpeg">
+                </audio>
+            """
+            st.markdown(audio_html, unsafe_allow_html=True)
+        except Exception as e:
+            st.warning(f"Could not play audio: {e}")
+        finally:
+            # Reset the state
+            st.session_state.audio_to_play = None
