@@ -410,7 +410,7 @@ if "messages" not in st.session_state:
 # Main content area - just the title
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
-<h1 class='mystic'>♾️</h1>
+<h1 class='mystic'></h1>
 <h2 class='subtitle'>Understand the universe</h2>
 """, unsafe_allow_html=True)
 st.markdown("<br><br>", unsafe_allow_html=True)
