@@ -396,7 +396,7 @@ def get_cosmic_response(prompt, file_content=None, file_type=None):
         return f"✨ The cosmic signals are unclear: {str(e)}"
 
 # --- APP LAYOUT ---
-set_page_background_and_style('bh_stars.png')
+set_page_background_and_style('Gemini_Generated_Image_o5wvg3o5wvg3o5wv.png')
 
 # Initialize database
 db = init_database()
