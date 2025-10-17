@@ -403,6 +403,9 @@ def get_cosmic_response(prompt, parts=None):
 # --- APP LAYOUT ---
 set_page_background_and_style('black_hole (1).png')
 
+# Initialize database
+db = init_database()
+
 # Initialize session state
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = None
