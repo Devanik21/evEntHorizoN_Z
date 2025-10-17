@@ -13,7 +13,6 @@ import io
 
 # --- ADVANCED FEATURE IMPORTS (install with pip) ---
 from gtts import gTTS  # For Text-to-Speech: pip install gTTS
-from speech_to_text import speech_to_text # For Speech-to-Text: pip install streamlit-speech-to-text
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="centered")
@@ -518,25 +517,7 @@ with st.sidebar:
     
     # Chat input in sidebar
     st.markdown("---")
-    
-    # Speech-to-Text and Text Input
-    col1, col2 = st.columns([1, 6])
-    with col1:
-        speech_text = speech_to_text(
-            language='en',
-            start_prompt="🎤",
-            stop_prompt="🛑",
-            key='speech_input',
-            use_container_width=True,
-            just_once=True
-        )
-    with col2:
-        prompt = st.text_area("Ask the cosmos...", key="chat_input", height=100, label_visibility="collapsed")
-
-    if speech_text:
-        st.session_state.chat_input = speech_text
-        st.rerun()
-
+    prompt = st.text_area("Ask the cosmos...", key="chat_input", height=100)
     send_button = st.button("🪄 Send", use_container_width=True)
     
     if send_button and prompt:
