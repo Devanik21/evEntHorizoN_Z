@@ -418,7 +418,7 @@ st.markdown("<br><br>", unsafe_allow_html=True)
 # Footer in main area
 st.markdown("""
 <hr>
-<p class='footer'>A voyage into cosmic intelligence ✨</p>
+<p class='footer'></p>
 """, unsafe_allow_html=True)
 
 # Sidebar with chat interface
