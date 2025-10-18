@@ -6,3 +6,4 @@ python-docx
 tinydb
 gTTS 
 plotly
+openpyxl
