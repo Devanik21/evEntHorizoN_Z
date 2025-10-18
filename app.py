@@ -708,7 +708,7 @@ with st.sidebar:
             
             with col1:
                 if st.button(
-                    f"💬 {session_name}",
+                    f" {session_name}",
                     key=f"load_{session_id}",
                     use_container_width=True
                 ):
