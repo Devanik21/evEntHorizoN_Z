@@ -52,7 +52,7 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) # Using 1.5 for better multi-modal and code gen
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
