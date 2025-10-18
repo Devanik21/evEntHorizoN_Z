@@ -288,8 +288,6 @@ def set_page_background_and_style(file_path):
     
     css_text = f'''
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
-    
     .stApp {{
         background-image: url("data:image/png;base64,{base64_img}");
         background-size: cover;
@@ -298,7 +296,7 @@ def set_page_background_and_style(file_path):
         background-attachment: fixed;
     }}
     
-    /* 100% Transparency - Everything */
+    /* 100% Pure Transparency - No boxes, no borders */
     [data-testid="stHeader"],
     [data-testid="stSidebar"],
     [data-testid="stSidebar"] > div,
@@ -317,215 +315,201 @@ def set_page_background_and_style(file_path):
     section[data-testid="stSidebar"],
     .stSelectbox,
     div[data-baseweb="select"],
-    .stExpander {{
+    .stExpander,
+    [data-testid="stSidebar"]::before {{
         background: transparent !important;
         backdrop-filter: none !important;
         border: none !important;
-    }}
-    
-    /* Fluid glass morphism borders only */
-    textarea, input, button {{
-        background: transparent !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        border-radius: 12px !important;
-        color: white !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
         box-shadow: none !important;
     }}
     
-    textarea:hover, input:hover {{
-        border-color: rgba(255,255,255,0.2) !important;
-        box-shadow: 0 0 25px rgba(100, 200, 255, 0.15), inset 0 0 15px rgba(255,255,255,0.03) !important;
+    /* Remove all borders from sidebar */
+    [data-testid="stSidebar"] {{
+        border-right: none !important;
     }}
     
+    /* Pure transparent inputs - no borders */
+    textarea, input {{
+        background: transparent !important;
+        border: none !important;
+        color: rgba(200, 200, 200, 0.9) !important;
+        transition: all 0.3s ease !important;
+        box-shadow: none !important;
+    }}
+    
+    textarea:hover, input:hover,
     textarea:focus, input:focus {{
-        border-color: rgba(100, 200, 255, 0.4) !important;
-        box-shadow: 0 0 35px rgba(100, 200, 255, 0.25), inset 0 0 20px rgba(255,255,255,0.05) !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: rgba(220, 220, 220, 1) !important;
     }}
     
-    /* Futuristic typography */
-    body, h1, h2, h3, h4, h5, h6, p, div, span, label, .stMarkdown {{
-        color: white !important;
-        font-family: 'Rajdhani', 'Inter', sans-serif;
-    }}
-    
-    h1, h2, h3 {{
-        font-family: 'Orbitron', sans-serif !important;
-        font-weight: 900 !important;
-        text-align: center;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-    }}
-    
-    h1 {{
-        font-size: 3.5rem !important;
-        background: linear-gradient(135deg, #ffffff 0%, #64c8ff 50%, #be00ff 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-shadow: 0 0 60px rgba(100, 200, 255, 0.4);
-        animation: glow 3s ease-in-out infinite alternate;
-    }}
-    
-    @keyframes glow {{
-        from {{ text-shadow: 0 0 40px rgba(100, 200, 255, 0.3); }}
-        to {{ text-shadow: 0 0 80px rgba(100, 200, 255, 0.6), 0 0 120px rgba(190, 0, 255, 0.3); }}
-    }}
-    
-    .subtitle {{
-        color: rgba(255,255,255,0.85);
-        font-size: 1.4rem;
-        margin-top: -15px;
-        letter-spacing: 4px;
-        font-weight: 300;
-        text-transform: uppercase;
-    }}
-    
-    /* Holographic buttons */
+    /* Pure transparent buttons - no borders */
     button {{
-        background: linear-gradient(135deg, rgba(100, 200, 255, 0.05), rgba(190, 0, 255, 0.05)) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        position: relative;
-        overflow: hidden;
-    }}
-    
-    button::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-        transition: left 0.5s;
+        background: transparent !important;
+        border: none !important;
+        color: rgba(200, 200, 200, 0.85) !important;
+        transition: all 0.3s ease !important;
+        box-shadow: none !important;
     }}
     
     button:hover {{
-        background: linear-gradient(135deg, rgba(100, 200, 255, 0.15), rgba(190, 0, 255, 0.15)) !important;
-        border-color: rgba(100, 200, 255, 0.5) !important;
-        box-shadow: 0 0 30px rgba(100, 200, 255, 0.3), inset 0 0 20px rgba(255,255,255,0.05) !important;
-        transform: translateY(-2px);
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: rgba(240, 240, 240, 1) !important;
+        transform: none !important;
     }}
     
-    button:hover::before {{
-        left: 100%;
+    /* Gray-white text throughout */
+    body, h1, h2, h3, h4, h5, h6, p, div, span, label, .stMarkdown {{
+        color: rgba(200, 200, 200, 0.9) !important;
+        font-family: 'Inter', -apple-system, system-ui, sans-serif;
     }}
     
-    /* Data tool buttons - enhanced glow */
-    .data-tool-button button {{
-        background: linear-gradient(135deg, rgba(0, 255, 200, 0.08), rgba(0, 150, 255, 0.08)) !important;
-        border: 1px solid rgba(0, 255, 200, 0.3) !important;
-        box-shadow: 0 0 20px rgba(0, 255, 200, 0.2) !important;
-    }}
-
-    .data-tool-button button:hover {{
-        box-shadow: 0 0 40px rgba(0, 255, 200, 0.4), inset 0 0 25px rgba(0, 255, 200, 0.1) !important;
-        border-color: rgba(0, 255, 200, 0.6) !important;
-        transform: translateY(-3px) scale(1.02);
+    h1, h2, h3 {{
+        font-weight: 300 !important;
+        text-align: center;
+        letter-spacing: 2px;
     }}
     
-    /* Transparent chat messages with subtle glow */
+    h1 {{
+        font-size: 3rem !important;
+        color: rgba(220, 220, 220, 0.95) !important;
+    }}
+    
+    .subtitle {{
+        color: rgba(180, 180, 180, 0.8);
+        font-size: 1.1rem;
+        margin-top: -10px;
+        letter-spacing: 3px;
+        font-weight: 300;
+    }}
+    
+    /* Transparent chat messages - no borders */
     .stChatMessage {{
         background: transparent !important;
-        border-left: 2px solid rgba(255,255,255,0.1) !important;
-        padding-left: 15px !important;
-        margin: 10px 0 !important;
+        border: none !important;
+        padding-left: 0px !important;
+        margin: 8px 0 !important;
     }}
     
     .stChatMessage:hover {{
-        border-left-color: rgba(100, 200, 255, 0.4) !important;
-        box-shadow: -5px 0 20px rgba(100, 200, 255, 0.1) !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }}
     
-    /* File badges - holographic */
+    /* File badges - pure transparent */
     .file-badge {{
         display: inline-block;
-        background: linear-gradient(135deg, rgba(100, 200, 255, 0.08), rgba(190, 0, 255, 0.08));
-        border: 1px solid rgba(255,255,255,0.15);
-        padding: 6px 14px;
-        border-radius: 20px;
-        margin: 5px;
+        background: transparent;
+        border: none;
+        padding: 4px 10px;
+        margin: 3px;
         font-size: 0.85rem;
-        color: white;
+        color: rgba(180, 180, 180, 0.8);
         transition: all 0.3s ease;
-        box-shadow: 0 0 15px rgba(100, 200, 255, 0.1);
     }}
     
     .file-badge:hover {{
-        background: linear-gradient(135deg, rgba(100, 200, 255, 0.15), rgba(190, 0, 255, 0.15));
-        border-color: rgba(100, 200, 255, 0.4);
-        box-shadow: 0 0 25px rgba(100, 200, 255, 0.3);
-        transform: translateY(-2px);
+        background: transparent;
+        border: none;
+        color: rgba(220, 220, 220, 1);
     }}
     
-    /* Cyberpunk scrollbar */
+    /* Data tool buttons - no special styling */
+    .data-tool-button button {{
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }}
+
+    .data-tool-button button:hover {{
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }}
+    
+    /* Minimal scrollbar */
     ::-webkit-scrollbar {{
-        width: 10px;
+        width: 6px;
         background: transparent;
     }}
     
     ::-webkit-scrollbar-thumb {{
-        background: linear-gradient(180deg, rgba(100, 200, 255, 0.3), rgba(190, 0, 255, 0.3));
-        border-radius: 5px;
-        border: 2px solid transparent;
+        background: rgba(150, 150, 150, 0.3);
+        border-radius: 3px;
     }}
     
     ::-webkit-scrollbar-thumb:hover {{
-        background: linear-gradient(180deg, rgba(100, 200, 255, 0.5), rgba(190, 0, 255, 0.5));
+        background: rgba(180, 180, 180, 0.5);
     }}
     
     /* Placeholder text */
     ::placeholder {{
-        color: rgba(255,255,255,0.3) !important;
-        font-style: italic;
+        color: rgba(150, 150, 150, 0.5) !important;
     }}
     
-    /* Selectbox styling */
+    /* Selectbox - transparent */
     div[data-baseweb="select"] > div {{
         background: transparent !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 12px !important;
+        border: none !important;
     }}
     
     div[data-baseweb="select"]:hover > div {{
-        border-color: rgba(255,255,255,0.3) !important;
-        box-shadow: 0 0 20px rgba(100, 200, 255, 0.15) !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }}
     
-    /* Footer with gradient */
+    /* Footer */
     .footer {{
-        font-size: 0.9rem;
-        background: linear-gradient(90deg, rgba(100, 200, 255, 0.5), rgba(190, 0, 255, 0.5), rgba(100, 200, 255, 0.5));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-size: 0.85rem;
+        color: rgba(160, 160, 160, 0.7);
         text-align: center;
-        font-weight: 600;
-        letter-spacing: 2px;
+        font-weight: 300;
+        letter-spacing: 1px;
     }}
     
     hr {{
-        opacity: 0.15;
-        border-color: rgba(255,255,255,0.15);
-        box-shadow: 0 0 10px rgba(100, 200, 255, 0.1);
+        opacity: 0.1;
+        border-color: rgba(200, 200, 200, 0.15);
+        box-shadow: none;
     }}
     
-    /* Expander styling */
+    /* Expander - transparent */
     .stExpander {{
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 12px !important;
+        background: transparent !important;
+        border: none !important;
     }}
     
     .stExpander:hover {{
-        border-color: rgba(100, 200, 255, 0.3) !important;
-        box-shadow: 0 0 20px rgba(100, 200, 255, 0.15) !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }}
     
-    /* Caption text - neon accent */
+    /* Caption text */
     .stCaptionContainer, small {{
-        color: rgba(100, 200, 255, 0.7) !important;
-        font-family: 'Rajdhani', sans-serif;
-        letter-spacing: 1px;
+        color: rgba(160, 160, 160, 0.7) !important;
+        font-weight: 300;
+    }}
+    
+    /* File uploader */
+    .stFileUploader label {{
+        color: rgba(180, 180, 180, 0.8) !important;
+    }}
+    
+    .stFileUploader section {{
+        background: transparent !important;
+        border: none !important;
+    }}
+    
+    .stFileUploader section:hover {{
+        background: transparent !important;
+        border: none !important;
     }}
     </style>
     '''
