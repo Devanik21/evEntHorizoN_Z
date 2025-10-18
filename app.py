@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 from tinydb import TinyDB, Query
 import io
+import pandas as pd
 
 # --- Plotly for Advanced Visualizations ---
 import plotly.graph_objects as go
@@ -51,7 +52,7 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) # Using 1.5 for better multi-modal and code gen
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -377,6 +378,19 @@ def set_page_background_and_style(file_path):
         box-shadow: 0 0 20px rgba(255,255,255,0.2) !important;
     }}
     
+    /* Magic visualizer button */
+    .magic-button button {
+        background: linear-gradient(45deg, rgba(0, 180, 255, 0.1), rgba(190, 0, 255, 0.1)) !important;
+        border: 1px solid rgba(100, 200, 255, 0.4) !important;
+        box-shadow: 0 0 15px rgba(100, 200, 255, 0.2) !important;
+    }
+
+    .magic-button button:hover {
+        box-shadow: 0 0 25px rgba(100, 200, 255, 0.5) !important;
+        border-color: rgba(100, 200, 255, 0.7) !important;
+        background: linear-gradient(45deg, rgba(0, 180, 255, 0.2), rgba(190, 0, 255, 0.2)) !important;
+    }
+    
     /* Footer styling */
     .footer {{
         font-size: 0.9rem;
@@ -484,6 +498,26 @@ def process_uploaded_file(uploaded_file):
             return extract_text_from_docx(uploaded_file), "text"
         elif file_extension == '.txt':
             return extract_text_from_txt(uploaded_file), "text"
+        elif file_extension in ['.csv', '.xls', '.xlsx']:
+            if file_extension == '.csv':
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+            
+            # For general queries, provide a summary
+            buffer = io.StringIO()
+            df.info(buf=buffer)
+            info_str = buffer.getvalue()
+            summary = f"""The user uploaded a data file named '{uploaded_file.name}'.
+Here is a summary of its content. Do not show the raw data unless asked.
+
+First 5 rows:
+{df.head().to_string()}
+
+Data columns and types:
+{info_str}
+"""
+            return summary, "text"
         elif file_extension in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
             image = Image.open(uploaded_file)
             return image, "image"
@@ -558,6 +592,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "audio_to_play" not in st.session_state:
     st.session_state.audio_to_play = None
+if "dataframe_for_viz" not in st.session_state:
+    st.session_state.dataframe_for_viz = None
 if "selected_persona" not in st.session_state:
     st.session_state.selected_persona = "Cosmic Intelligence"
 
@@ -677,16 +713,69 @@ with st.sidebar:
     # File uploader
     uploaded_files = st.file_uploader(
         "📎 Attach files",
-        type=['pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
+        type=['pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'csv', 'xls', 'xlsx'],
         accept_multiple_files=True,
         key="file_uploader"
     )
     
     if uploaded_files:
-        st.markdown("#### Attached:")
+        st.markdown("##### Attached:")
         for file in uploaded_files:
             st.markdown(f'<div class="file-badge">📄 {file.name}</div>', unsafe_allow_html=True)
     
+    # --- Magic Visualizer ---
+    data_files = [f for f in uploaded_files if Path(f.name).suffix.lower() in ['.csv', '.xls', '.xlsx']] if uploaded_files else []
+    if data_files:
+        st.markdown("---")
+        st.markdown("#### 🪄 Data Tools")
+        st.markdown('<div class="magic-button">', unsafe_allow_html=True)
+        if st.button("Magic Visualizer", use_container_width=True, help=f"Automatically visualize {data_files[0].name}"):
+            if st.session_state.current_session_id is None:
+                persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+            data_file = data_files[0]
+            data_file.seek(0)  # Reset file pointer as it might have been read
+            if Path(data_file.name).suffix.lower() == '.csv':
+                df = pd.read_csv(data_file)
+            else:
+                df = pd.read_excel(data_file)
+            
+            st.session_state.dataframe_for_viz = df
+
+            buffer = io.StringIO()
+            df.info(buf=buffer)
+            info_str = buffer.getvalue()
+
+            viz_prompt = f"""The user wants to visualize the uploaded file: '{data_file.name}'.
+A pandas DataFrame named `df` has been created from this file and is available in the execution scope.
+Here is the head of the DataFrame:
+```
+{df.head().to_string()}
+```
+Here is the DataFrame's info:
+```
+{info_str}
+```
+Your task is to generate Python code to create a single, insightful Plotly visualization from this `df`.
+The code should be a complete, runnable script within a single ```python block.
+The final figure object MUST be named `fig`.
+You MUST use one of the available cosmic themes by calling `apply_cosmic_theme(fig, 'Theme Name')` at the end of your script.
+Respond with only the Python code block, without any additional explanation.
+"""
+            user_message_content = f"Visualize the data in `{data_file.name}`."
+            user_message = save_message(db, st.session_state.current_session_id, "user", user_message_content)
+            if user_message: st.session_state.messages.append(user_message)
+
+            session_persona_name = get_session_persona(db, st.session_state.current_session_id)
+            cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
+            response_code = get_cosmic_response(viz_prompt, cosmic_context, parts=None)
+            
+            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", response_code)
+            if assistant_message: st.session_state.messages.append(assistant_message)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown("---")
     
     # Display chat messages
@@ -714,17 +803,25 @@ with st.sidebar:
                                     local_scope = {
                                         'go': go,
                                         'px': px,
-                                        'pd': __import__('pandas'), # Allow pandas for data manipulation
+                                        'pd': pd,
                                         'apply_cosmic_theme': apply_cosmic_theme
                                     }
+                                    # Add dataframe to scope if it exists for visualization
+                                    if 'dataframe_for_viz' in st.session_state and st.session_state.dataframe_for_viz is not None:
+                                        local_scope['df'] = st.session_state.dataframe_for_viz
+
                                     exec(code, local_scope)
                                     
                                     if 'fig' in local_scope:
                                         # A plot was successfully generated
                                         st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None)
+                                        # Clean up dataframe from session state after use
+                                        if 'dataframe_for_viz' in st.session_state:
+                                            st.session_state.dataframe_for_viz = None
                                     else:
                                         # The python code did not generate a 'fig' object, so just show the code
                                         st.code(code, language='python')
+
 
                                 except Exception as e:
                                     st.error(f"🔮 Cosmic Interference: Could not render visualization. Error: {e}")
