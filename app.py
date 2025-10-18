@@ -52,7 +52,7 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) # Using 1.5 for better multi-modal and code gen
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -866,6 +866,21 @@ Respond with only the Python code block, without any additional explanation.
         if st.session_state.current_session_id is None:
             persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
             st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+        # If a data file is attached, load it into a dataframe for visualization.
+        # This makes regular chat prompts visualization-aware, fixing the 'df is not defined' error.
+        st.session_state.dataframe_for_viz = None # Clear previous df
+        if uploaded_files:
+            data_files = [f for f in uploaded_files if Path(f.name).suffix.lower() in ['.csv', '.xls', '.xlsx']]
+            if data_files:
+                data_file = data_files[0]
+                data_file.seek(0)
+                if Path(data_file.name).suffix.lower() == '.csv':
+                    df = pd.read_csv(data_file)
+                else:
+                    df = pd.read_excel(data_file)
+                st.session_state.dataframe_for_viz = df
+                data_file.seek(0) # Reset pointer for the next processing step
 
         # Process uploaded files
         file_names = []
