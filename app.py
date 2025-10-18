@@ -731,30 +731,34 @@ with st.sidebar:
             st.markdown(f'<div class="file-badge">📄 {file.name}</div>', unsafe_allow_html=True)
     
     # --- Magic Visualizer ---
+    # --- Data Tools ---
     data_files = [f for f in uploaded_files if Path(f.name).suffix.lower() in ['.csv', '.xls', '.xlsx']] if uploaded_files else []
     if data_files:
         st.markdown("---")
         st.markdown("#### 🪄 Data Tools")
-        st.markdown('<div class="magic-button">', unsafe_allow_html=True)
-        if st.button("Magic Visualizer", use_container_width=True, help=f"Automatically visualize {data_files[0].name}"):
-            if st.session_state.current_session_id is None:
-                persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
-                st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
 
-            data_file = data_files[0]
-            data_file.seek(0)  # Reset file pointer as it might have been read
-            if Path(data_file.name).suffix.lower() == '.csv':
-                df = pd.read_csv(data_file)
-            else:
-                df = pd.read_excel(data_file)
-            
-            st.session_state.dataframe_for_viz = df
+        col1, col2 = st.columns(2)
 
-            buffer = io.StringIO()
-            df.info(buf=buffer)
-            info_str = buffer.getvalue()
+        with col1:
+            st.markdown('<div class="magic-button">', unsafe_allow_html=True)
+            if st.button("✨ Magic Visualizer", use_container_width=True, help=f"Automatically visualize {data_files[0].name}"):
+                if st.session_state.current_session_id is None:
+                    persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                    st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
 
-            viz_prompt = f"""The user wants to visualize the uploaded file: '{data_file.name}'.
+                data_file = data_files[0]
+                data_file.seek(0)
+                if Path(data_file.name).suffix.lower() == '.csv':
+                    df = pd.read_csv(data_file)
+                else:
+                    df = pd.read_excel(data_file)
+                st.session_state.dataframe_for_viz = df
+
+                buffer = io.StringIO()
+                df.info(buf=buffer)
+                info_str = buffer.getvalue()
+
+                viz_prompt = f"""The user wants to visualize the uploaded file: '{data_file.name}'.
 A pandas DataFrame named `df` has been created from this file and is available in the execution scope.
 Here is the head of the DataFrame:
 ```
