@@ -1030,7 +1030,9 @@ apply_cosmic_theme(fig, 'Supernova')
                                     exec(code, local_scope)
                                     
                                     if 'fig' in local_scope:
-                                        st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None)
+                                        # Use unique key based on message timestamp and index
+                                        chart_key = f"chart_{message['timestamp']}_{i}"
+                                        st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None, key=chart_key)
                                         # Don't clear dataframe - keep it for subsequent charts
                                     else:
                                         st.code(code, language='python')
