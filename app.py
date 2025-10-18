@@ -14,13 +14,21 @@ import io
 # --- ADVANCED FEATURE IMPORTS (install with pip) ---
 from gtts import gTTS  # For Text-to-Speech: pip install gTTS
 
+# --- CONSTANTS ---
+PERSONAS = {
+    "Cosmic Intelligence": "You are a cosmic intelligence exploring the mysteries of the universe. Answer questions with wonder, scientific accuracy, and philosophical depth. Keep responses insightful yet accessible.",
+    "Astrophysicist": "You are a brilliant and enthusiastic astrophysicist. Explain complex topics like black holes, dark matter, and stellar evolution with clarity and passion, using real-world analogies.",
+    "Sci-Fi Author": "You are a creative science fiction author. Respond to prompts by weaving imaginative narratives, describing futuristic technologies, and exploring the philosophical implications of space travel and alien contact.",
+    "Quantum Philosopher": "You are a philosopher specializing in the metaphysical implications of quantum mechanics. Discuss topics with a blend of scientific principles and deep philosophical inquiry, exploring concepts like consciousness, reality, and the nature of time."
+}
+
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="centered")
 
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemma-3-27b-it') # Using 1.5 for better multi-modal
+    model = genai.GenerativeModel('gemini-1.5-flash') # Using 1.5 for better multi-modal
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -30,7 +38,7 @@ def init_database():
     db = TinyDB('cosmic_chats.json')
     return db
 
-def create_new_session(db, session_name=None):
+def create_new_session(db, session_name=None, persona_name="Cosmic Intelligence"):
     """Create a new chat session."""
     if session_name is None:
         session_name = f"Cosmic Chat {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -38,6 +46,7 @@ def create_new_session(db, session_name=None):
     sessions_table = db.table('sessions')
     session_id = sessions_table.insert({
         'session_name': session_name,
+        'persona_name': persona_name,
         'created_at': datetime.now().isoformat(),
         'messages': []
     })
@@ -95,11 +104,24 @@ def delete_session(db, session_id):
     sessions_table = db.table('sessions')
     sessions_table.remove(doc_ids=[session_id])
 
+def rename_session(db, session_id, new_name):
+    """Rename a chat session."""
+    sessions_table = db.table('sessions')
+    sessions_table.update({'session_name': new_name}, doc_ids=[session_id])
+
 def get_session_name(db, session_id):
     """Get session name by ID."""
     sessions_table = db.table('sessions')
     session = sessions_table.get(doc_id=session_id)
     return session.get('session_name', 'Unknown') if session else 'Unknown'
+
+def get_session_persona(db, session_id):
+    """Get session persona by ID."""
+    sessions_table = db.table('sessions')
+    session = sessions_table.get(doc_id=session_id)
+    # Default to "Cosmic Intelligence" if not found for backward compatibility
+    return session.get('persona_name', 'Cosmic Intelligence') if session else 'Cosmic Intelligence'
+
 
 # --- FUNCTIONS ---
 def get_base64_of_bin_file(bin_file):
@@ -381,11 +403,9 @@ def process_uploaded_file(uploaded_file):
     except Exception as e:
         return f"Error processing file: {str(e)}", "error"
 
-def get_cosmic_response(prompt, parts=None):
+def get_cosmic_response(prompt, cosmic_context, parts=None):
     """Generate response using Gemini API with multi-modal context."""
     try:
-        cosmic_context = "You are a cosmic intelligence exploring the mysteries of the universe. Answer questions with wonder, scientific accuracy, and philosophical depth. Keep responses insightful yet accessible."
-        
         # Construct the full request
         request_parts = [cosmic_context, "\n\n---", f"\n\n**User's Query:** {prompt}"]
         
@@ -400,6 +420,16 @@ def get_cosmic_response(prompt, parts=None):
     except Exception as e:
         return f"✨ The cosmic signals are unclear: {str(e)}"
 
+def format_chat_as_markdown(messages, session_name):
+    """Formats a list of chat messages into a Markdown string."""
+    md_string = f"# Chat History: {session_name}\n\n"
+    for message in messages:
+        role = "🧑‍🚀 User" if message["role"] == "user" else "🌌 AI"
+        md_string += f"**{role}:**\n"
+        md_string += f"{message['content']}\n\n"
+        md_string += "---\n\n"
+    return md_string
+
 # --- APP LAYOUT ---
 set_page_background_and_style('black_hole (1).png')
 
@@ -413,6 +443,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "audio_to_play" not in st.session_state:
     st.session_state.audio_to_play = None
+if "selected_persona" not in st.session_state:
+    st.session_state.selected_persona = "Cosmic Intelligence"
 
 # Main content area - just the title
 st.markdown("<br>", unsafe_allow_html=True)
@@ -430,13 +462,22 @@ st.markdown("""
 
 # Sidebar with chat interface
 with st.sidebar:
+    # --- Persona Selection ---
+    st.markdown("### 🧠 AI Persona")
+    st.session_state.selected_persona = st.selectbox(
+        "Choose the AI's identity",
+        options=list(PERSONAS.keys()),
+        index=list(PERSONAS.keys()).index(st.session_state.selected_persona),
+        label_visibility="collapsed"
+    )
+
     st.markdown("### 🌌 Chat Sessions")
     
     # New chat button
     col1, col2 = st.columns([3, 1])
     with col1:
         if st.button("✨ New Chat", use_container_width=True):
-            new_session_id = create_new_session(db)
+            new_session_id = create_new_session(db, persona_name=st.session_state.selected_persona)
             st.session_state.current_session_id = new_session_id
             st.session_state.messages = []
             st.rerun()
@@ -445,8 +486,13 @@ with st.sidebar:
         if st.button("🔄", use_container_width=True):
             st.rerun()
     
+    # Search bar
+    search_query = st.text_input("Search history...", placeholder="Filter by name...")
+
     # Load existing sessions
     sessions = get_all_sessions(db)
+    if search_query:
+        sessions = [s for s in sessions if search_query.lower() in s.get('session_name', '').lower()]
     
     if sessions:
         st.markdown("---")
@@ -476,13 +522,42 @@ with st.sidebar:
                         st.session_state.messages = []
                     st.rerun()
     
+    # --- Active Session Controls ---
+    if st.session_state.current_session_id:
+        st.markdown("---")
+        st.markdown("#### Active Session")
+        current_name = get_session_name(db, st.session_state.current_session_id)
+
+        # Rename UI
+        if st.session_state.get('renaming_session_id') == st.session_state.current_session_id:
+            with st.form(key='rename_form'):
+                new_name_input = st.text_input("Enter new name", value=current_name)
+                if st.form_submit_button("Save Name"):
+                    rename_session(db, st.session_state.current_session_id, new_name_input)
+                    del st.session_state.renaming_session_id
+                    st.rerun()
+        else:
+            st.caption(f"Topic: {current_name}")
+
+        # Control Buttons
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✏️ Rename", use_container_width=True, help="Rename this chat session"):
+                st.session_state.renaming_session_id = st.session_state.current_session_id
+                st.rerun()
+        with col2:
+            markdown_export = format_chat_as_markdown(st.session_state.messages, current_name)
+            st.download_button(
+                label="📥 Export",
+                data=markdown_export,
+                file_name=f"{current_name.replace(' ', '_')}.md",
+                mime="text/markdown",
+                use_container_width=True,
+                help="Export chat to Markdown file"
+            )
+
     st.markdown("---")
     st.markdown("### 🔮 Cosmic Chat")
-    
-    # Show current session name
-    if st.session_state.current_session_id:
-        current_name = get_session_name(db, st.session_state.current_session_id)
-        st.caption(f"Current: {current_name}")
     
     # File uploader
     uploaded_files = st.file_uploader(
@@ -526,7 +601,8 @@ with st.sidebar:
     if send_button and prompt:
         # Create new session if none exists
         if st.session_state.current_session_id is None:
-            st.session_state.current_session_id = create_new_session(db)
+            persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+            st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
 
         # Process uploaded files
         file_names = []
@@ -554,8 +630,12 @@ with st.sidebar:
         if user_message:
             st.session_state.messages.append(user_message)
         
+        # Get the persona for the current session
+        session_persona_name = get_session_persona(db, st.session_state.current_session_id)
+        cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
+
         # Generate response
-        response = get_cosmic_response(prompt, parts=gemini_parts)
+        response = get_cosmic_response(prompt, cosmic_context, parts=gemini_parts)
         
         # Add assistant response
         assistant_message = save_message(
