@@ -60,7 +60,7 @@ def get_all_sessions(db):
     sessions.sort(key=lambda x: x.get('created_at', ''), reverse=True)
     return sessions
 
-def save_message(db, session_id, role, content, files=None):
+def save_message(db, session_id, role, content, files=None, suggestions=None):
     """Save a message to the database."""
     sessions_table = db.table('sessions') 
     Session = Query()
@@ -74,6 +74,8 @@ def save_message(db, session_id, role, content, files=None):
         }
         if files:
             message['files'] = files
+        if suggestions:
+            message['suggestions'] = suggestions
         
         messages = session.get('messages', [])
         messages.append(message)
@@ -95,6 +97,8 @@ def load_session_messages(db, session_id):
             }
             if 'files' in msg:
                 message['files'] = msg['files']
+            if 'suggestions' in msg:
+                message['suggestions'] = msg['suggestions']
             messages.append(message)
         return messages
     return []
@@ -420,6 +424,32 @@ def get_cosmic_response(prompt, cosmic_context, parts=None):
     except Exception as e:
         return f"✨ The cosmic signals are unclear: {str(e)}"
 
+def get_follow_up_suggestions(prompt, response):
+    """Generate follow-up questions using the Gemini API."""
+    try:
+        suggestion_prompt = f"""
+        Based on the following exchange:
+        User: "{prompt}"
+        AI: "{response}"
+
+        Please generate three short, distinct, and relevant follow-up questions the user might be interested in asking next.
+        The questions should encourage further exploration of the topic.
+        Return the questions as a JSON-formatted list of strings.
+        Example: ["What is a singularity?", "How do black holes evaporate?", "Are wormholes real?"]
+        """
+        suggestion_response = model.generate_content(suggestion_prompt)
+        # Clean up the response to extract only the JSON part
+        json_part = suggestion_response.text.strip().replace("```json", "").replace("```", "")
+        suggestions = json.loads(json_part)
+        # Ensure it's a list of strings
+        if isinstance(suggestions, list) and all(isinstance(s, str) for s in suggestions):
+            return suggestions[:3] # Return at most 3
+        return []
+    except (json.JSONDecodeError, TypeError, Exception) as e:
+        # If JSON parsing fails or any other error, return an empty list
+        print(f"Could not generate/parse follow-up suggestions: {e}")
+        return []
+
 def format_chat_as_markdown(messages, session_name):
     """Formats a list of chat messages into a Markdown string."""
     md_string = f"# Chat History: {session_name}\n\n"
@@ -589,6 +619,20 @@ with st.sidebar:
             else:
                 st.markdown(message["content"])
 
+            # --- Feature: Proactive Follow-up Suggestions ---
+            if message["role"] == "assistant" and message.get("suggestions"):
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("###### You might also want to ask:")
+                
+                # Use columns for a neat layout
+                num_suggestions = len(message["suggestions"])
+                cols = st.columns(num_suggestions)
+                for i, suggestion in enumerate(message["suggestions"]):
+                    with cols[i]:
+                        if st.button(suggestion, key=f"sugg_{message['timestamp']}_{i}", use_container_width=True):
+                            st.session_state.chat_input = suggestion
+                            st.rerun()
+
             if "files" in message and message["files"]:
                 for file_name in message["files"]:
                     st.caption(f"📎 {file_name}")
@@ -636,13 +680,15 @@ with st.sidebar:
 
         # Generate response
         response = get_cosmic_response(prompt, cosmic_context, parts=gemini_parts)
+        suggestions = get_follow_up_suggestions(prompt, response)
         
         # Add assistant response
         assistant_message = save_message(
             db,
             st.session_state.current_session_id,
             "assistant",
-            response
+            response,
+            suggestions=suggestions
         )
         if assistant_message:
             st.session_state.messages.append(assistant_message)
