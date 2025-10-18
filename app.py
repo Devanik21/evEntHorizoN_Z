@@ -774,18 +774,18 @@ The final figure object MUST be named `fig`.
 You MUST use one of the available cosmic themes by calling `apply_cosmic_theme(fig, 'Theme Name')` at the end of your script.
 Respond with only the Python code block, without any additional explanation.
 """
-            user_message_content = f"Visualize the data in `{data_file.name}`."
-            user_message = save_message(db, st.session_state.current_session_id, "user", user_message_content)
-            if user_message: st.session_state.messages.append(user_message)
+                user_message_content = f"Visualize the data in `{data_file.name}`."
+                user_message = save_message(db, st.session_state.current_session_id, "user", user_message_content)
+                if user_message: st.session_state.messages.append(user_message)
 
-            session_persona_name = get_session_persona(db, st.session_state.current_session_id)
-            cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
-            response_code = get_cosmic_response(viz_prompt, cosmic_context, parts=None)
-            
-            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", response_code)
-            if assistant_message: st.session_state.messages.append(assistant_message)
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+                session_persona_name = get_session_persona(db, st.session_state.current_session_id)
+                cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
+                response_code = get_cosmic_response(viz_prompt, cosmic_context, parts=None)
+                
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", response_code)
+                if assistant_message: st.session_state.messages.append(assistant_message)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
     
