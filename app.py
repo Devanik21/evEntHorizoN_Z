@@ -52,7 +52,7 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) # Using 1.5 for better multi-modal and code gen
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -735,44 +735,25 @@ with st.sidebar:
     if data_files:
         st.markdown("---")
         st.markdown("#### 🪄 Data Tools")
-
-        # Prepare data once for all tools
-        data_file = data_files[0]
-        data_file.seek(0)
-        if Path(data_file.name).suffix.lower() == '.csv':
-            df = pd.read_csv(data_file)
-        else:
-            df = pd.read_excel(data_file)
-        data_file.seek(0) # Reset for other potential uses
-
-        buffer = io.StringIO()
-        df.info(buf=buffer)
-        info_str = buffer.getvalue()
-        df_head_str = df.head().to_string()
-
-        def trigger_ai_tool(tool_prompt, user_message_content):
-            """Helper function to run an AI tool, save messages, and rerun."""
+        st.markdown('<div class="magic-button">', unsafe_allow_html=True)
+        if st.button("Magic Visualizer", use_container_width=True, help=f"Automatically visualize {data_files[0].name}"):
             if st.session_state.current_session_id is None:
                 persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
                 st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
 
-            # For tools that might generate code, ensure the df is in session state
+            data_file = data_files[0]
+            data_file.seek(0)  # Reset file pointer as it might have been read
+            if Path(data_file.name).suffix.lower() == '.csv':
+                df = pd.read_csv(data_file)
+            else:
+                df = pd.read_excel(data_file)
+            
             st.session_state.dataframe_for_viz = df
 
-            user_message = save_message(db, st.session_state.current_session_id, "user", user_message_content)
-            if user_message: st.session_state.messages.append(user_message)
+            buffer = io.StringIO()
+            df.info(buf=buffer)
+            info_str = buffer.getvalue()
 
-            session_persona_name = get_session_persona(db, st.session_state.current_session_id)
-            cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
-            response_text = get_cosmic_response(tool_prompt, cosmic_context, parts=None)
-            
-            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", response_text)
-            if assistant_message: st.session_state.messages.append(assistant_message)
-            st.rerun()
-
-        # --- Tool Buttons ---
-        st.markdown('<div class="magic-button">', unsafe_allow_html=True)
-        if st.button("✨ Magic Visualizer", use_container_width=True, help=f"Automatically visualize {data_file.name}"):
             viz_prompt = f"""The user wants to visualize the uploaded file: '{data_file.name}'.
 A pandas DataFrame named `df` has been created from this file and is available in the execution scope.
 Here is the head of the DataFrame:
