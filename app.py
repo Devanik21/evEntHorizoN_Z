@@ -230,13 +230,13 @@ def set_page_background_and_style(file_path):
     
     css_text = f'''
     <style>
-    .stApp {{
+    .stApp {{{{
         background-image: url("data:image/png;base64,{base64_img}");
         background-size: cover;
         background-position: center center;
         background-repeat: no-repeat;
         background-attachment: fixed;
-    }}
+    }}}}
     
     /* Complete transparency for all containers */
     [data-testid="stHeader"],
@@ -258,75 +258,75 @@ def set_page_background_and_style(file_path):
         background: transparent !important;
         backdrop-filter: none !important;
         border: none !important;
-    }}
+    }}}}
     
     /* Remove all borders */
-    [data-testid="stSidebar"] {{
+    [data-testid="stSidebar"] {{{{
         border-right: none !important;
-    }}
+    }}}}
     
     /* Transparent inputs with subtle hover */
-    textarea, input {{
+    textarea, input {{{{
         color: white !important;
         background: transparent !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
         border-radius: 8px !important;
         transition: all 0.3s ease !important;
         box-shadow: none !important;
-    }}
+    }}}}
     
     textarea:hover, input:hover,
-    textarea:focus, input:focus {{
+    textarea:focus, input:focus {{{{
         border-color: rgba(255,255,255,0.3) !important;
         box-shadow: 0 0 15px rgba(255,255,255,0.1) !important;
         background: transparent !important;
-    }}
+    }}}}
     
     /* Force text area transparency */
-    .stTextArea textarea {{
+    .stTextArea textarea {{{{
         background-color: transparent !important;
         background: transparent !important;
-    }}
+    }}}}
     
-    .stTextArea > div > div {{
+    .stTextArea > div > div {{{{
         background: transparent !important;
-    }}
+    }}}}
     
     /* White text everywhere */
-    body, h1, h2, h3, h4, h5, h6, p, div, span, label, .stMarkdown {{
+    body, h1, h2, h3, h4, h5, h6, p, div, span, label, .stMarkdown {{{{
         color: white !important;
         font-family: 'Inter', sans-serif;
-    }}
+    }}}}
     
-    h1, h2, h3, h4, h5, h6 {{
+    h1, h2, h3, h4, h5, h6 {{{{
         font-weight: 700;
         text-align: center;
-    }}
+    }}}}
     
-    .subtitle {{
+    .subtitle {{{{
         color: rgba(255,255,255,0.9);
         font-size: 1.3rem;
         margin-top: -10px;
         letter-spacing: 0.5px;
-    }}
+    }}}}
     
-    .mystic {{
+    .mystic {{{{
         text-shadow: 0 0 30px rgba(255,255,255,0.6);
         letter-spacing: 1.5px;
-    }}
+    }}}}
     
     /* Transparent chat messages */
-    .stChatMessage {{
+    .stChatMessage {{{{
         background: transparent !important;
         color: white !important;
-    }}
+    }}}}
     
-    .stChatMessage [data-testid="chatAvatarIcon"] {{
+    .stChatMessage [data-testid="chatAvatarIcon"] {{{{
         background: transparent !important;
-    }}
+    }}}}
     
     /* File badges - minimal glass effect */
-    .file-badge {{
+    .file-badge {{{{
         display: inline-block;
         background: rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.2);
@@ -336,63 +336,63 @@ def set_page_background_and_style(file_path):
         font-size: 0.9rem;
         color: white;
         transition: all 0.3s ease;
-    }}
+    }}}}
     
-    .file-badge:hover {{
+    .file-badge:hover {{{{
         background: rgba(255,255,255,0.1);
         border-color: rgba(255,255,255,0.4);
-    }}
+    }}}}
     
     /* Session badges */
-    .session-item {{
+    .session-item {{{{
         padding: 8px 12px;
         margin: 5px 0;
         border-radius: 8px;
         border: 1px solid rgba(255,255,255,0.1);
         cursor: pointer;
         transition: all 0.3s ease;
-    }}
+    }}}}
     
-    .session-item:hover {{
+    .session-item:hover {{{{
         background: rgba(255,255,255,0.1);
         border-color: rgba(255,255,255,0.3);
-    }}
+    }}}}
     
-    .session-item.active {{
+    .session-item.active {{{{
         background: rgba(255,255,255,0.15);
         border-color: rgba(255,255,255,0.4);
-    }}
+    }}}}
     
     /* Transparent buttons with glow on hover */
-    button {{
+    button {{{{
         background: transparent !important;
         border: 1px solid rgba(255,255,255,0.2) !important;
         color: white !important;
         border-radius: 8px !important;
         transition: all 0.3s ease !important;
-    }}
+    }}}}
     
-    button:hover {{
+    button:hover {{{{
         background: rgba(255,255,255,0.1) !important;
         border-color: rgba(255,255,255,0.4) !important;
         box-shadow: 0 0 20px rgba(255,255,255,0.2) !important;
-    }}
+    }}}}
     
     /* Magic visualizer button */
-    .magic-button button {
+    .magic-button button {{{
         background: linear-gradient(45deg, rgba(0, 180, 255, 0.1), rgba(190, 0, 255, 0.1)) !important;
         border: 1px solid rgba(100, 200, 255, 0.4) !important;
         box-shadow: 0 0 15px rgba(100, 200, 255, 0.2) !important;
-    }
+    }}}
 
-    .magic-button button:hover {
+    .magic-button button:hover {{{
         box-shadow: 0 0 25px rgba(100, 200, 255, 0.5) !important;
         border-color: rgba(100, 200, 255, 0.7) !important;
         background: linear-gradient(45deg, rgba(0, 180, 255, 0.2), rgba(190, 0, 255, 0.2)) !important;
-    }
+    }}}
     
     /* Footer styling */
-    .footer {{
+    .footer {{{{
         font-size: 0.9rem;
         background: linear-gradient(90deg, #404040, #1a1a1a, #404040);
         -webkit-background-clip: text;
@@ -400,62 +400,62 @@ def set_page_background_and_style(file_path):
         background-clip: text;
         text-align: center;
         font-weight: 500;
-    }}
+    }}}}
     
-    hr {{
+    hr {{{{
         opacity: 0.2;
         border-color: rgba(255,255,255,0.2);
-    }}
+    }}}}
     
     /* File uploader specific */
-    .stFileUploader label {{
+    .stFileUploader label {{{{
         color: white !important;
-    }}
+    }}}}
     
-    .stFileUploader section {{
+    .stFileUploader section {{{{
         background: transparent !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
         border-radius: 8px !important;
-    }}
+    }}}}
     
-    .stFileUploader section:hover {{
+    .stFileUploader section:hover {{{{
         border-color: rgba(255,255,255,0.3) !important;
-    }}
+    }}}}
     
     /* Caption text */
-    .stCaptionContainer, small {{
+    .stCaptionContainer, small {{{{
         color: rgba(255,255,255,0.7) !important;
-    }}
+    }}}}
     
     /* Placeholder text */
-    ::placeholder {{
+    ::placeholder {{{{
         color: rgba(255,255,255,0.4) !important;
-    }}
+    }}}}
     
     /* Scrollbar */
-    ::-webkit-scrollbar {{
+    ::-webkit-scrollbar {{{{
         width: 8px;
         background: transparent;
-    }}
+    }}}}
     
-    ::-webkit-scrollbar-thumb {{
+    ::-webkit-scrollbar-thumb {{{{
         background: rgba(255,255,255,0.2);
         border-radius: 4px;
-    }}
+    }}}}
     
-    ::-webkit-scrollbar-thumb:hover {{
+    ::-webkit-scrollbar-thumb:hover {{{{
         background: rgba(255,255,255,0.3);
-    }}
+    }}}}
     
     /* Selectbox */
-    .stSelectbox {{
+    .stSelectbox {{{{
         background: transparent !important;
-    }}
+    }}}}
     
-    .stSelectbox > div > div {{
+    .stSelectbox > div > div {{{{
         background: transparent !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-    }}
+    }}}}
     </style>
     '''
     st.markdown(css_text, unsafe_allow_html=True)
