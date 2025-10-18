@@ -11,15 +11,38 @@ from datetime import datetime
 from tinydb import TinyDB, Query
 import io
 
+# --- Plotly for Advanced Visualizations ---
+import plotly.graph_objects as go
+import plotly.express as px
+
 # --- ADVANCED FEATURE IMPORTS (install with pip) ---
 from gtts import gTTS  # For Text-to-Speech: pip install gTTS
 
 # --- CONSTANTS ---
+VISUALIZATION_INSTRUCTIONS = """
+When asked to create a plot or visualization, you MUST generate Python code using the `plotly` library.
+The code block must be a valid Python script that creates a figure object named `fig`.
+The code should be wrapped in ```python ... ```.
+To make the plot match the app's theme, you MUST use one of the available cosmic themes by calling `apply_cosmic_theme(fig, 'Theme Name')` at the end of your script.
+Available 'Theme Name' options are: 'Nebula Burst', 'Starlight', 'Void', 'Supernova', 'Quantum Foam'.
+The final figure object in the script MUST be named `fig`.
+Example of a simple plot generation:
+```python
+import plotly.graph_objects as go
+import pandas as pd
+
+df = pd.DataFrame({'x': [1, 2, 3, 4], 'y': [10, 11, 12, 13]})
+fig = go.Figure(data=go.Scatter(x=df['x'], y=df['y'], mode='lines+markers'))
+fig.update_layout(title='Sample Plot')
+apply_cosmic_theme(fig, 'Nebula Burst')
+```
+"""
+
 PERSONAS = {
-    "Cosmic Intelligence": "You are a cosmic intelligence exploring the mysteries of the universe. Answer questions with wonder, scientific accuracy, and philosophical depth. Keep responses insightful yet accessible.",
-    "Astrophysicist": "You are a brilliant and enthusiastic astrophysicist. Explain complex topics like black holes, dark matter, and stellar evolution with clarity and passion, using real-world analogies.",
-    "Sci-Fi Author": "You are a creative science fiction author. Respond to prompts by weaving imaginative narratives, describing futuristic technologies, and exploring the philosophical implications of space travel and alien contact.",
-    "Quantum Philosopher": "You are a philosopher specializing in the metaphysical implications of quantum mechanics. Discuss topics with a blend of scientific principles and deep philosophical inquiry, exploring concepts like consciousness, reality, and the nature of time."
+    "Cosmic Intelligence": "You are a cosmic intelligence exploring the mysteries of the universe. Answer questions with wonder, scientific accuracy, and philosophical depth. Keep responses insightful yet accessible." + VISUALIZATION_INSTRUCTIONS,
+    "Astrophysicist": "You are a brilliant and enthusiastic astrophysicist. Explain complex topics like black holes, dark matter, and stellar evolution with clarity and passion, using real-world analogies." + VISUALIZATION_INSTRUCTIONS,
+    "Sci-Fi Author": "You are a creative science fiction author. Respond to prompts by weaving imaginative narratives, describing futuristic technologies, and exploring the philosophical implications of space travel and alien contact." + VISUALIZATION_INSTRUCTIONS,
+    "Quantum Philosopher": "You are a philosopher specializing in the metaphysical implications of quantum mechanics. Discuss topics with a blend of scientific principles and deep philosophical inquiry, exploring concepts like consciousness, reality, and the nature of time." + VISUALIZATION_INSTRUCTIONS
 }
 
 # --- PAGE CONFIG ---
@@ -27,8 +50,8 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 
 # --- CONFIGURE GEMINI API ---
 try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-2.0-flash') # Using 1.5 for better multi-modal
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) # Using 1.5 for better multi-modal and code gen
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -125,6 +148,68 @@ def get_session_persona(db, session_id):
     session = sessions_table.get(doc_id=session_id)
     # Default to "Cosmic Intelligence" if not found for backward compatibility
     return session.get('persona_name', 'Cosmic Intelligence') if session else 'Cosmic Intelligence'
+
+# --- VISUALIZATION THEMES (Feature #10) ---
+COSMIC_THEMES = {
+    'Nebula Burst': {
+        'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)',
+        'font': {'color': '#E5E5E5'}, 'title_font': {'color': '#FFFFFF', 'size': 20},
+        'xaxis': {'gridcolor': 'rgba(255, 255, 255, 0.1)', 'linecolor': 'rgba(255, 255, 255, 0.3)'},
+        'yaxis': {'gridcolor': 'rgba(255, 255, 255, 0.1)', 'linecolor': 'rgba(255, 255, 255, 0.3)'},
+        'colorway': ['#E040FB', '#7C4DFF', '#448AFF', '#00BCD4', '#FF4081']
+    },
+    'Starlight': {
+        'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)',
+        'font': {'color': '#B0C4DE'}, 'title_font': {'color': '#FFFFFF', 'size': 20},
+        'xaxis': {'gridcolor': 'rgba(176, 196, 222, 0.2)', 'linecolor': 'rgba(176, 196, 222, 0.4)'},
+        'yaxis': {'gridcolor': 'rgba(176, 196, 222, 0.2)', 'linecolor': 'rgba(176, 196, 222, 0.4)'},
+        'colorway': ['#FFFFFF', '#ADD8E6', '#87CEEB', '#00BFFF', '#1E90FF']
+    },
+    'Void': {
+        'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)',
+        'font': {'color': '#999999'}, 'title_font': {'color': '#FFFFFF', 'size': 20},
+        'xaxis': {'gridcolor': 'rgba(255, 255, 255, 0.05)', 'linecolor': 'rgba(255, 255, 255, 0.2)'},
+        'yaxis': {'gridcolor': 'rgba(255, 255, 255, 0.05)', 'linecolor': 'rgba(255, 255, 255, 0.2)'},
+        'colorway': ['#FFFFFF', '#D3D3D3', '#A9A9A9', '#808080', '#696969']
+    },
+    'Supernova': {
+        'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)',
+        'font': {'color': '#FFDDC1'}, 'title_font': {'color': '#FFFFFF', 'size': 20},
+        'xaxis': {'gridcolor': 'rgba(255, 107, 107, 0.2)', 'linecolor': 'rgba(255, 107, 107, 0.4)'},
+        'yaxis': {'gridcolor': 'rgba(255, 107, 107, 0.2)', 'linecolor': 'rgba(255, 107, 107, 0.4)'},
+        'colorway': ['#FF4E50', '#FC913A', '#F9D423', '#FFD700', '#FCE38A']
+    },
+    'Quantum Foam': {
+        'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)',
+        'font': {'color': '#AFEEEE'}, 'title_font': {'color': '#FFFFFF', 'size': 20},
+        'xaxis': {'gridcolor': 'rgba(64, 224, 208, 0.2)', 'linecolor': 'rgba(64, 224, 208, 0.4)'},
+        'yaxis': {'gridcolor': 'rgba(64, 224, 208, 0.2)', 'linecolor': 'rgba(64, 224, 208, 0.4)'},
+        'colorway': ['#00FF7F', '#7FFFD4', '#40E0D0', '#20B2AA', '#00CED1']
+    }
+}
+
+def apply_cosmic_theme(fig, theme_name='Nebula Burst'):
+    """
+    Applies a futuristic, transparent theme to a Plotly figure.
+    This function is intended to be available in the exec scope for the AI.
+    """
+    if theme_name not in COSMIC_THEMES:
+        print(f"Warning: Theme '{theme_name}' not found. Defaulting to 'Nebula Burst'.")
+        theme_name = 'Nebula Burst'
+    
+    theme = COSMIC_THEMES[theme_name]
+    fig.update_layout(
+        paper_bgcolor=theme['paper_bgcolor'],
+        plot_bgcolor=theme['plot_bgcolor'],
+        font=theme['font'],
+        title_font=theme['title_font'],
+        xaxis=theme['xaxis'],
+        yaxis=theme['yaxis'],
+        colorway=theme['colorway'],
+        legend=dict(bgcolor='rgba(0,0,0,0.3)', bordercolor='rgba(255,255,255,0.2)'),
+        margin=dict(l=20, r=20, t=50, b=20) # Adjust margins for better look
+    )
+    return fig
 
 
 # --- FUNCTIONS ---
@@ -612,29 +697,41 @@ with st.sidebar:
                 col1, col2 = st.columns([10, 1])
                 with col1:
                     # --- Feature: Enhanced Code Rendering ---
-                    # Split the content by the code block delimiter to handle text and code separately
                     parts = message['content'].split('```')
                     for i, part in enumerate(parts):
                         if not part.strip():
                             continue
                         
-                        # Odd-indexed parts are code blocks
                         if i % 2 == 1:
                             lines = part.split('\n', 1)
                             lang = lines[0].strip()
-                            
-                            if len(lines) > 1:
-                                code = lines[1]
-                            else:
-                                # This case is unlikely but handles a code block with no content
-                                code = ""
+                            code = lines[1] if len(lines) > 1 else ""
 
-                            # If no language is specified, default to plaintext and use the whole part as code
-                            if not lang:
-                                lang = "plaintext"
-                                code = part
-                            
-                            st.code(code, language=lang)
+                            # --- Feature #10: Interactive Cosmic Visualizations ---
+                            if lang == 'python':
+                                try:
+                                    # Prepare a safe execution scope
+                                    local_scope = {
+                                        'go': go,
+                                        'px': px,
+                                        'pd': __import__('pandas'), # Allow pandas for data manipulation
+                                        'apply_cosmic_theme': apply_cosmic_theme
+                                    }
+                                    exec(code, local_scope)
+                                    
+                                    if 'fig' in local_scope:
+                                        # A plot was successfully generated
+                                        st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None)
+                                    else:
+                                        # The python code did not generate a 'fig' object, so just show the code
+                                        st.code(code, language='python')
+
+                                except Exception as e:
+                                    st.error(f"🔮 Cosmic Interference: Could not render visualization. Error: {e}")
+                                    st.code(code, language='python') # Show the code that failed
+                            else:
+                                # It's a code block, but not for a plot we can execute
+                                st.code(code, language=lang if lang else "plaintext")
                         else: # Even-indexed parts are regular markdown text
                             st.markdown(part)
                 with col2:
