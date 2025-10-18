@@ -379,11 +379,12 @@ def set_page_background_and_style(file_path):
     }}}}
     
     /* Magic visualizer button */
-    .magic-button button {{{
+    /* Magic visualizer button */
+    .magic-button button {{
         background: linear-gradient(45deg, rgba(0, 180, 255, 0.1), rgba(190, 0, 255, 0.1)) !important;
         border: 1px solid rgba(100, 200, 255, 0.4) !important;
         box-shadow: 0 0 15px rgba(100, 200, 255, 0.2) !important;
-    }}}
+    }}
 
     .magic-button button:hover {{{
         box-shadow: 0 0 25px rgba(100, 200, 255, 0.5) !important;
