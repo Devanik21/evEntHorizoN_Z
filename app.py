@@ -11,13 +11,15 @@ from datetime import datetime
 from tinydb import TinyDB, Query
 import io
 import pandas as pd
+import numpy as np
 
 # --- Plotly for Advanced Visualizations ---
 import plotly.graph_objects as go
 import plotly.express as px
 
-# --- ADVANCED FEATURE IMPORTS (install with pip) ---
-from gtts import gTTS  # For Text-to-Speech: pip install gTTS
+# --- ADVANCED FEATURE IMPORTS ---
+from gtts import gTTS
+from scipy import stats
 
 # --- CONSTANTS ---
 VISUALIZATION_INSTRUCTIONS = """
@@ -51,7 +53,7 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 
 # --- CONFIGURE GEMINI API ---
 try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) # Using 1.5 for better multi-modal and code gen
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel('gemini-2.5-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
@@ -80,7 +82,6 @@ def get_all_sessions(db):
     """Get all chat sessions."""
     sessions_table = db.table('sessions')
     sessions = sessions_table.all()
-    # Sort by created_at descending
     sessions.sort(key=lambda x: x.get('created_at', ''), reverse=True)
     return sessions
 
@@ -117,7 +118,7 @@ def load_session_messages(db, session_id):
             message = {
                 'role': msg['role'],
                 'content': msg['content'],
-                'timestamp': msg.get('timestamp', datetime.now().isoformat()) # Add timestamp for TTS key
+                'timestamp': msg.get('timestamp', datetime.now().isoformat())
             }
             if 'files' in msg:
                 message['files'] = msg['files']
@@ -147,10 +148,9 @@ def get_session_persona(db, session_id):
     """Get session persona by ID."""
     sessions_table = db.table('sessions')
     session = sessions_table.get(doc_id=session_id)
-    # Default to "Cosmic Intelligence" if not found for backward compatibility
     return session.get('persona_name', 'Cosmic Intelligence') if session else 'Cosmic Intelligence'
 
-# --- VISUALIZATION THEMES (Feature #10) ---
+# --- VISUALIZATION THEMES ---
 COSMIC_THEMES = {
     'Nebula Burst': {
         'paper_bgcolor': 'rgba(0,0,0,0)', 'plot_bgcolor': 'rgba(0,0,0,0)',
@@ -190,12 +190,8 @@ COSMIC_THEMES = {
 }
 
 def apply_cosmic_theme(fig, theme_name='Nebula Burst'):
-    """
-    Applies a futuristic, transparent theme to a Plotly figure.
-    This function is intended to be available in the exec scope for the AI.
-    """
+    """Applies a futuristic, transparent theme to a Plotly figure."""
     if theme_name not in COSMIC_THEMES:
-        print(f"Warning: Theme '{theme_name}' not found. Defaulting to 'Nebula Burst'.")
         theme_name = 'Nebula Burst'
     
     theme = COSMIC_THEMES[theme_name]
@@ -208,10 +204,72 @@ def apply_cosmic_theme(fig, theme_name='Nebula Burst'):
         yaxis=theme['yaxis'],
         colorway=theme['colorway'],
         legend=dict(bgcolor='rgba(0,0,0,0.3)', bordercolor='rgba(255,255,255,0.2)'),
-        margin=dict(l=20, r=20, t=50, b=20) # Adjust margins for better look
+        margin=dict(l=20, r=20, t=50, b=20)
     )
     return fig
 
+# --- DATA TOOL FUNCTIONS ---
+def statistical_analysis(df):
+    """Generate comprehensive statistical analysis"""
+    stats_dict = {
+        'shape': df.shape,
+        'columns': df.columns.tolist(),
+        'dtypes': df.dtypes.to_dict(),
+        'missing': df.isnull().sum().to_dict(),
+        'numeric_stats': df.describe().to_dict() if len(df.select_dtypes(include=[np.number]).columns) > 0 else {}
+    }
+    return stats_dict
+
+def correlation_matrix(df):
+    """Generate correlation matrix for numeric columns"""
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) > 1:
+        corr = df[numeric_cols].corr()
+        
+        fig = go.Figure(data=go.Heatmap(
+            z=corr.values,
+            x=corr.columns,
+            y=corr.columns,
+            colorscale='Viridis',
+            text=corr.values,
+            texttemplate='%{text:.2f}',
+            textfont={"size": 10},
+            colorbar=dict(title="Correlation")
+        ))
+        fig.update_layout(title='Correlation Matrix')
+        apply_cosmic_theme(fig, 'Quantum Foam')
+        return fig
+    return None
+
+def trend_detection(df):
+    """Detect trends in time series or sequential data"""
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) > 0:
+        col = numeric_cols[0]
+        data = df[col].dropna()
+        x = np.arange(len(data))
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x, data)
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x, y=data, mode='markers', name='Data', marker=dict(color='#00BCD4')))
+        fig.add_trace(go.Scatter(x=x, y=slope*x + intercept, mode='lines', name=f'Trend (R²={r_value**2:.3f})', line=dict(color='#E040FB', width=2)))
+        fig.update_layout(title=f'Trend Analysis: {col}', xaxis_title='Index', yaxis_title=col)
+        apply_cosmic_theme(fig, 'Nebula Burst')
+        return fig
+    return None
+
+def distribution_analysis(df):
+    """Analyze distribution of numeric columns"""
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) > 0:
+        col = numeric_cols[0]
+        
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(x=df[col], name='Distribution', marker=dict(color='#7C4DFF'), opacity=0.7))
+        fig.update_layout(title=f'Distribution: {col}', xaxis_title=col, yaxis_title='Frequency')
+        apply_cosmic_theme(fig, 'Supernova')
+        return fig
+    return None
 
 # --- FUNCTIONS ---
 def get_base64_of_bin_file(bin_file):
@@ -230,6 +288,8 @@ def set_page_background_and_style(file_path):
     
     css_text = f'''
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+    
     .stApp {{
         background-image: url("data:image/png;base64,{base64_img}");
         background-size: cover;
@@ -238,7 +298,7 @@ def set_page_background_and_style(file_path):
         background-attachment: fixed;
     }}
     
-    /* Complete transparency for all containers */
+    /* 100% Transparency - Everything */
     [data-testid="stHeader"],
     [data-testid="stSidebar"],
     [data-testid="stSidebar"] > div,
@@ -254,207 +314,218 @@ def set_page_background_and_style(file_path):
     [data-testid="stChatMessageContent"],
     .element-container,
     .stMarkdown,
-    section[data-testid="stSidebar"] {{
+    section[data-testid="stSidebar"],
+    .stSelectbox,
+    div[data-baseweb="select"],
+    .stExpander {{
         background: transparent !important;
         backdrop-filter: none !important;
         border: none !important;
     }}
     
-    /* Remove all borders */
-    [data-testid="stSidebar"] {{
-        border-right: none !important;
-    }}
-    
-    /* Transparent inputs with subtle hover */
-    textarea, input {{
-        color: white !important;
+    /* Fluid glass morphism borders only */
+    textarea, input, button {{
         background: transparent !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 8px !important;
-        transition: all 0.3s ease !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 12px !important;
+        color: white !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
         box-shadow: none !important;
     }}
     
-    textarea:hover, input:hover,
+    textarea:hover, input:hover {{
+        border-color: rgba(255,255,255,0.2) !important;
+        box-shadow: 0 0 25px rgba(100, 200, 255, 0.15), inset 0 0 15px rgba(255,255,255,0.03) !important;
+    }}
+    
     textarea:focus, input:focus {{
-        border-color: rgba(255,255,255,0.3) !important;
-        box-shadow: 0 0 15px rgba(255,255,255,0.1) !important;
-        background: transparent !important;
+        border-color: rgba(100, 200, 255, 0.4) !important;
+        box-shadow: 0 0 35px rgba(100, 200, 255, 0.25), inset 0 0 20px rgba(255,255,255,0.05) !important;
     }}
     
-    /* Force text area transparency */
-    .stTextArea textarea {{
-        background-color: transparent !important;
-        background: transparent !important;
-    }}
-    
-    .stTextArea > div > div {{
-        background: transparent !important;
-    }}
-    
-    /* White text everywhere */
+    /* Futuristic typography */
     body, h1, h2, h3, h4, h5, h6, p, div, span, label, .stMarkdown {{
         color: white !important;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Rajdhani', 'Inter', sans-serif;
     }}
     
-    h1, h2, h3, h4, h5, h6 {{
-        font-weight: 700;
+    h1, h2, h3 {{
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: 900 !important;
         text-align: center;
+        letter-spacing: 3px;
+        text-transform: uppercase;
     }}
     
-    .subtitle {{
-        color: rgba(255,255,255,0.9);
-        font-size: 1.3rem;
-        margin-top: -10px;
-        letter-spacing: 0.5px;
-    }}
-    
-    .mystic {{
-        text-shadow: 0 0 30px rgba(255,255,255,0.6);
-        letter-spacing: 1.5px;
-    }}
-    
-    /* Transparent chat messages */
-    .stChatMessage {{
-        background: transparent !important;
-        color: white !important;
-    }}
-    
-    .stChatMessage [data-testid="chatAvatarIcon"] {{
-        background: transparent !important;
-    }}
-    
-    /* File badges - minimal glass effect */
-    .file-badge {{
-        display: inline-block;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.2);
-        padding: 5px 12px;
-        border-radius: 15px;
-        margin: 5px;
-        font-size: 0.9rem;
-        color: white;
-        transition: all 0.3s ease;
-    }}
-    
-    .file-badge:hover {{
-        background: rgba(255,255,255,0.1);
-        border-color: rgba(255,255,255,0.4);
-    }}
-    
-    /* Session badges */
-    .session-item {{
-        padding: 8px 12px;
-        margin: 5px 0;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.1);
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }}
-    
-    .session-item:hover {{
-        background: rgba(255,255,255,0.1);
-        border-color: rgba(255,255,255,0.3);
-    }}
-    
-    .session-item.active {{
-        background: rgba(255,255,255,0.15);
-        border-color: rgba(255,255,255,0.4);
-    }}
-    
-    /* Transparent buttons with glow on hover */
-    button {{
-        background: transparent !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-        color: white !important;
-        border-radius: 8px !important;
-        transition: all 0.3s ease !important;
-    }}
-    
-    button:hover {{
-        background: rgba(255,255,255,0.1) !important;
-        border-color: rgba(255,255,255,0.4) !important;
-        box-shadow: 0 0 20px rgba(255,255,255,0.2) !important;
-    }}
-    
-    /* Magic visualizer button */
-    .magic-button button {{
-        background: linear-gradient(45deg, rgba(0, 180, 255, 0.1), rgba(190, 0, 255, 0.1)) !important;
-        border: 1px solid rgba(100, 200, 255, 0.4) !important;
-        box-shadow: 0 0 15px rgba(100, 200, 255, 0.2) !important;
-    }}
-
-    .magic-button button:hover {{
-        box-shadow: 0 0 25px rgba(100, 200, 255, 0.5) !important;
-        border-color: rgba(100, 200, 255, 0.7) !important;
-        background: linear-gradient(45deg, rgba(0, 180, 255, 0.2), rgba(190, 0, 255, 0.2)) !important;
-    }}
-    
-    /* Footer styling */
-    .footer {{
-        font-size: 0.9rem;
-        background: linear-gradient(90deg, #404040, #1a1a1a, #404040);
+    h1 {{
+        font-size: 3.5rem !important;
+        background: linear-gradient(135deg, #ffffff 0%, #64c8ff 50%, #be00ff 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-align: center;
-        font-weight: 500;
+        text-shadow: 0 0 60px rgba(100, 200, 255, 0.4);
+        animation: glow 3s ease-in-out infinite alternate;
     }}
     
-    hr {{
-        opacity: 0.2;
-        border-color: rgba(255,255,255,0.2);
+    @keyframes glow {{
+        from {{ text-shadow: 0 0 40px rgba(100, 200, 255, 0.3); }}
+        to {{ text-shadow: 0 0 80px rgba(100, 200, 255, 0.6), 0 0 120px rgba(190, 0, 255, 0.3); }}
     }}
     
-    /* File uploader specific */
-    .stFileUploader label {{
-        color: white !important;
+    .subtitle {{
+        color: rgba(255,255,255,0.85);
+        font-size: 1.4rem;
+        margin-top: -15px;
+        letter-spacing: 4px;
+        font-weight: 300;
+        text-transform: uppercase;
     }}
     
-    .stFileUploader section {{
-        background: transparent !important;
+    /* Holographic buttons */
+    button {{
+        background: linear-gradient(135deg, rgba(100, 200, 255, 0.05), rgba(190, 0, 255, 0.05)) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 8px !important;
+        position: relative;
+        overflow: hidden;
     }}
     
-    .stFileUploader section:hover {{
-        border-color: rgba(255,255,255,0.3) !important;
+    button::before {{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        transition: left 0.5s;
     }}
     
-    /* Caption text */
-    .stCaptionContainer, small {{
-        color: rgba(255,255,255,0.7) !important;
+    button:hover {{
+        background: linear-gradient(135deg, rgba(100, 200, 255, 0.15), rgba(190, 0, 255, 0.15)) !important;
+        border-color: rgba(100, 200, 255, 0.5) !important;
+        box-shadow: 0 0 30px rgba(100, 200, 255, 0.3), inset 0 0 20px rgba(255,255,255,0.05) !important;
+        transform: translateY(-2px);
     }}
     
-    /* Placeholder text */
-    ::placeholder {{
-        color: rgba(255,255,255,0.4) !important;
+    button:hover::before {{
+        left: 100%;
     }}
     
-    /* Scrollbar */
+    /* Data tool buttons - enhanced glow */
+    .data-tool-button button {{
+        background: linear-gradient(135deg, rgba(0, 255, 200, 0.08), rgba(0, 150, 255, 0.08)) !important;
+        border: 1px solid rgba(0, 255, 200, 0.3) !important;
+        box-shadow: 0 0 20px rgba(0, 255, 200, 0.2) !important;
+    }}
+
+    .data-tool-button button:hover {{
+        box-shadow: 0 0 40px rgba(0, 255, 200, 0.4), inset 0 0 25px rgba(0, 255, 200, 0.1) !important;
+        border-color: rgba(0, 255, 200, 0.6) !important;
+        transform: translateY(-3px) scale(1.02);
+    }}
+    
+    /* Transparent chat messages with subtle glow */
+    .stChatMessage {{
+        background: transparent !important;
+        border-left: 2px solid rgba(255,255,255,0.1) !important;
+        padding-left: 15px !important;
+        margin: 10px 0 !important;
+    }}
+    
+    .stChatMessage:hover {{
+        border-left-color: rgba(100, 200, 255, 0.4) !important;
+        box-shadow: -5px 0 20px rgba(100, 200, 255, 0.1) !important;
+    }}
+    
+    /* File badges - holographic */
+    .file-badge {{
+        display: inline-block;
+        background: linear-gradient(135deg, rgba(100, 200, 255, 0.08), rgba(190, 0, 255, 0.08));
+        border: 1px solid rgba(255,255,255,0.15);
+        padding: 6px 14px;
+        border-radius: 20px;
+        margin: 5px;
+        font-size: 0.85rem;
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 15px rgba(100, 200, 255, 0.1);
+    }}
+    
+    .file-badge:hover {{
+        background: linear-gradient(135deg, rgba(100, 200, 255, 0.15), rgba(190, 0, 255, 0.15));
+        border-color: rgba(100, 200, 255, 0.4);
+        box-shadow: 0 0 25px rgba(100, 200, 255, 0.3);
+        transform: translateY(-2px);
+    }}
+    
+    /* Cyberpunk scrollbar */
     ::-webkit-scrollbar {{
-        width: 8px;
+        width: 10px;
         background: transparent;
     }}
     
     ::-webkit-scrollbar-thumb {{
-        background: rgba(255,255,255,0.2);
-        border-radius: 4px;
+        background: linear-gradient(180deg, rgba(100, 200, 255, 0.3), rgba(190, 0, 255, 0.3));
+        border-radius: 5px;
+        border: 2px solid transparent;
     }}
     
     ::-webkit-scrollbar-thumb:hover {{
-        background: rgba(255,255,255,0.3);
+        background: linear-gradient(180deg, rgba(100, 200, 255, 0.5), rgba(190, 0, 255, 0.5));
     }}
     
-    /* Selectbox */
-    .stSelectbox {{
-        background: transparent !important;
+    /* Placeholder text */
+    ::placeholder {{
+        color: rgba(255,255,255,0.3) !important;
+        font-style: italic;
     }}
     
-    .stSelectbox > div > div {{
+    /* Selectbox styling */
+    div[data-baseweb="select"] > div {{
         background: transparent !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 12px !important;
+    }}
+    
+    div[data-baseweb="select"]:hover > div {{
+        border-color: rgba(255,255,255,0.3) !important;
+        box-shadow: 0 0 20px rgba(100, 200, 255, 0.15) !important;
+    }}
+    
+    /* Footer with gradient */
+    .footer {{
+        font-size: 0.9rem;
+        background: linear-gradient(90deg, rgba(100, 200, 255, 0.5), rgba(190, 0, 255, 0.5), rgba(100, 200, 255, 0.5));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-align: center;
+        font-weight: 600;
+        letter-spacing: 2px;
+    }}
+    
+    hr {{
+        opacity: 0.15;
+        border-color: rgba(255,255,255,0.15);
+        box-shadow: 0 0 10px rgba(100, 200, 255, 0.1);
+    }}
+    
+    /* Expander styling */
+    .stExpander {{
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 12px !important;
+    }}
+    
+    .stExpander:hover {{
+        border-color: rgba(100, 200, 255, 0.3) !important;
+        box-shadow: 0 0 20px rgba(100, 200, 255, 0.15) !important;
+    }}
+    
+    /* Caption text - neon accent */
+    .stCaptionContainer, small {{
+        color: rgba(100, 200, 255, 0.7) !important;
+        font-family: 'Rajdhani', sans-serif;
+        letter-spacing: 1px;
     }}
     </style>
     '''
@@ -490,7 +561,6 @@ def extract_text_from_txt(txt_file):
 def process_uploaded_file(uploaded_file):
     """Process uploaded file and extract content."""
     try:
-        # Reset file pointer to ensure it can be read, as it might have been read before.
         uploaded_file.seek(0)
         file_extension = Path(uploaded_file.name).suffix.lower()
         
@@ -506,13 +576,12 @@ def process_uploaded_file(uploaded_file):
             else:
                 df = pd.read_excel(uploaded_file)
             
-            # For general queries, provide a summary with instructions for the AI
             buffer = io.StringIO()
             df.info(buf=buffer)
             info_str = buffer.getvalue()
             summary = f"""The user uploaded a data file named '{uploaded_file.name}'.
 This file has been pre-loaded into a pandas DataFrame named `df` which is available in the code execution scope.
-When generating Python code for visualization, you MUST use this existing `df` variable directly. DO NOT try to read the file again (e.g., with `pd.read_csv('{uploaded_file.name}')`).
+When generating Python code for visualization, you MUST use this existing `df` variable directly. DO NOT try to read the file again.
 
 Here is a summary of the `df` DataFrame:
 
@@ -522,7 +591,6 @@ First 5 rows:
 Data columns and types:
 {info_str}
 """
-            # Reset pointer again for any subsequent processing in the app
             uploaded_file.seek(0)
             return summary, "text"
         elif file_extension in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
@@ -536,16 +604,13 @@ Data columns and types:
 def get_cosmic_response(prompt, cosmic_context, parts=None):
     """Generate response using Gemini API with multi-modal context."""
     try:
-        # Construct the full request
         request_parts = [cosmic_context, "\n\n---", f"\n\n**User's Query:** {prompt}"]
         
         if parts:
-            # Prepend a header for the file contexts
             request_parts.append("\n\n**Attached Context:**\n")
             request_parts.extend(parts)
 
         response = model.generate_content(request_parts)
-        
         return response.text
     except Exception as e:
         return f"✨ The cosmic signals are unclear: {str(e)}"
@@ -558,22 +623,17 @@ def get_follow_up_suggestions(prompt, response):
         User: "{prompt}"
         AI: "{response}"
 
-        Please generate three short, distinct, and relevant follow-up questions the user might be interested in asking next.
-        The questions should encourage further exploration of the topic.
-        Return the questions as a JSON-formatted list of strings.
+        Generate three short, distinct, and relevant follow-up questions.
+        Return as JSON list of strings.
         Example: ["What is a singularity?", "How do black holes evaporate?", "Are wormholes real?"]
         """
         suggestion_response = model.generate_content(suggestion_prompt)
-        # Clean up the response to extract only the JSON part
         json_part = suggestion_response.text.strip().replace("```json", "").replace("```", "")
         suggestions = json.loads(json_part)
-        # Ensure it's a list of strings
         if isinstance(suggestions, list) and all(isinstance(s, str) for s in suggestions):
-            return suggestions[:3] # Return at most 3
+            return suggestions[:3]
         return []
-    except (json.JSONDecodeError, TypeError, Exception) as e:
-        # If JSON parsing fails or any other error, return an empty list
-        print(f"Could not generate/parse follow-up suggestions: {e}")
+    except Exception as e:
         return []
 
 def format_chat_as_markdown(messages, session_name):
@@ -604,24 +664,24 @@ if "dataframe_for_viz" not in st.session_state:
 if "selected_persona" not in st.session_state:
     st.session_state.selected_persona = "Cosmic Intelligence"
 
-# Main content area - just the title
+# Main content area
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
-<h1 class='mystic'></h1>
-<h2 class='subtitle'>Understand the universe</h2>
+<h1>EVENT HORIZON</h1>
+<h2 class='subtitle'>⚛️ Explore • Analyze • Transcend ⚛️</h2>
 """, unsafe_allow_html=True)
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 # Footer in main area
 st.markdown("""
 <hr>
-<p class='footer'></p>
+<p class='footer'>🌠 POWERED BY COSMIC INTELLIGENCE 🌠</p>
 """, unsafe_allow_html=True)
 
 # Sidebar with chat interface
 with st.sidebar:
     # --- Persona Selection ---
-    st.markdown("### 🧠 AI Persona")
+    st.markdown("### 🧠 AI PERSONA")
     st.session_state.selected_persona = st.selectbox(
         "Choose the AI's identity",
         options=list(PERSONAS.keys()),
@@ -629,7 +689,7 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-    st.markdown("### 🌌 Chat Sessions")
+    st.markdown("### 🌌 CHAT SESSIONS")
     
     # New chat button
     col1, col2 = st.columns([3, 1])
@@ -645,7 +705,7 @@ with st.sidebar:
             st.rerun()
     
     # Search bar
-    search_query = st.text_input("Search history...", placeholder="Filter by name...")
+    search_query = st.text_input("🔍 Search history...", placeholder="Filter by name...")
 
     # Load existing sessions
     sessions = get_all_sessions(db)
@@ -654,9 +714,9 @@ with st.sidebar:
     
     if sessions:
         st.markdown("---")
-        st.markdown("#### History")
+        st.markdown("#### HISTORY")
         
-        for session in sessions[:10]:  # Show last 10 sessions
+        for session in sessions[:10]:
             session_id = session.doc_id
             session_name = session.get('session_name', 'Unnamed Chat')
             
@@ -683,24 +743,22 @@ with st.sidebar:
     # --- Active Session Controls ---
     if st.session_state.current_session_id:
         st.markdown("---")
-        st.markdown("#### Active Session")
+        st.markdown("#### ACTIVE SESSION")
         current_name = get_session_name(db, st.session_state.current_session_id)
 
-        # Rename UI
         if st.session_state.get('renaming_session_id') == st.session_state.current_session_id:
             with st.form(key='rename_form'):
                 new_name_input = st.text_input("Enter new name", value=current_name)
-                if st.form_submit_button("Save Name"):
+                if st.form_submit_button("💾 Save"):
                     rename_session(db, st.session_state.current_session_id, new_name_input)
                     del st.session_state.renaming_session_id
                     st.rerun()
         else:
-            st.caption(f"Topic: {current_name}")
+            st.caption(f"📍 {current_name}")
 
-        # Control Buttons
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("✏️ Rename", use_container_width=True, help="Rename this chat session"):
+            if st.button("✏️ Rename", use_container_width=True):
                 st.session_state.renaming_session_id = st.session_state.current_session_id
                 st.rerun()
         with col2:
@@ -710,12 +768,11 @@ with st.sidebar:
                 data=markdown_export,
                 file_name=f"{current_name.replace(' ', '_')}.md",
                 mime="text/markdown",
-                use_container_width=True,
-                help="Export chat to Markdown file"
+                use_container_width=True
             )
 
     st.markdown("---")
-    st.markdown("### 🔮 Cosmic Chat")
+    st.markdown("### 🔮 COSMIC CHAT")
     
     # File uploader
     uploaded_files = st.file_uploader(
@@ -726,66 +783,237 @@ with st.sidebar:
     )
     
     if uploaded_files:
-        st.markdown("##### Attached:")
+        st.markdown("##### ATTACHED FILES:")
         for file in uploaded_files:
             st.markdown(f'<div class="file-badge">📄 {file.name}</div>', unsafe_allow_html=True)
     
-    # --- Magic Visualizer ---
-    # --- Data Tools ---
+    # --- DATA TOOLS (Enhanced with 4 new tools) ---
     data_files = [f for f in uploaded_files if Path(f.name).suffix.lower() in ['.csv', '.xls', '.xlsx']] if uploaded_files else []
     if data_files:
         st.markdown("---")
-        st.markdown("#### 🪄 Data Tools")
+        st.markdown("#### 🪄 DATA TOOLS")
 
-        col1, col2 = st.columns(2)
+        # Tool 1: Magic Visualizer
+        st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
+        if st.button("✨ Magic Visualizer", use_container_width=True, help="AI-powered auto visualization"):
+            if st.session_state.current_session_id is None:
+                persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
 
-        with col1:
-            st.markdown('<div class="magic-button">', unsafe_allow_html=True)
-            if st.button("✨ Magic Visualizer", use_container_width=True, help=f"Automatically visualize {data_files[0].name}"):
-                if st.session_state.current_session_id is None:
-                    persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
-                    st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+            data_file = data_files[0]
+            data_file.seek(0)
+            if Path(data_file.name).suffix.lower() == '.csv':
+                df = pd.read_csv(data_file)
+            else:
+                df = pd.read_excel(data_file)
+            st.session_state.dataframe_for_viz = df
 
-                data_file = data_files[0]
-                data_file.seek(0)
-                if Path(data_file.name).suffix.lower() == '.csv':
-                    df = pd.read_csv(data_file)
-                else:
-                    df = pd.read_excel(data_file)
-                st.session_state.dataframe_for_viz = df
+            buffer = io.StringIO()
+            df.info(buf=buffer)
+            info_str = buffer.getvalue()
 
-                buffer = io.StringIO()
-                df.info(buf=buffer)
-                info_str = buffer.getvalue()
-
-                viz_prompt = f"""The user wants to visualize the uploaded file: '{data_file.name}'.
-A pandas DataFrame named `df` has been created from this file and is available in the execution scope.
-Here is the head of the DataFrame:
+            viz_prompt = f"""Generate Python code to create an insightful Plotly visualization from this data.
+DataFrame `df` is available with these details:
 ```
 {df.head().to_string()}
 ```
-Here is the DataFrame's info:
+Info:
 ```
 {info_str}
 ```
-Your task is to generate Python code to create a single, insightful Plotly visualization from this `df`.
-The code should be a complete, runnable script within a single ```python block.
-The final figure object MUST be named `fig`.
-You MUST use one of the available cosmic themes by calling `apply_cosmic_theme(fig, 'Theme Name')` at the end of your script.
-Respond with only the Python code block, without any additional explanation.
-"""
-                user_message_content = f"Visualize the data in `{data_file.name}`."
-                user_message = save_message(db, st.session_state.current_session_id, "user", user_message_content)
-                if user_message: st.session_state.messages.append(user_message)
+Create a single visualization in ```python block. Final figure must be `fig`. Use apply_cosmic_theme(fig, 'Theme Name')."""
+            
+            user_message_content = f"🎨 Visualize `{data_file.name}`"
+            user_message = save_message(db, st.session_state.current_session_id, "user", user_message_content)
+            if user_message: st.session_state.messages.append(user_message)
 
-                session_persona_name = get_session_persona(db, st.session_state.current_session_id)
-                cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
-                response_code = get_cosmic_response(viz_prompt, cosmic_context, parts=None)
-                
-                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", response_code)
+            session_persona_name = get_session_persona(db, st.session_state.current_session_id)
+            cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
+            response_code = get_cosmic_response(viz_prompt, cosmic_context, parts=None)
+            
+            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", response_code)
+            if assistant_message: st.session_state.messages.append(assistant_message)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Tool 2: Statistical Analyzer
+        st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
+        if st.button("📊 Statistical Analyzer", use_container_width=True, help="Comprehensive statistical analysis"):
+            if st.session_state.current_session_id is None:
+                persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+            data_file = data_files[0]
+            data_file.seek(0)
+            if Path(data_file.name).suffix.lower() == '.csv':
+                df = pd.read_csv(data_file)
+            else:
+                df = pd.read_excel(data_file)
+            
+            stats_dict = statistical_analysis(df)
+            stats_text = f"""📊 **Statistical Analysis Report**
+
+**Dataset Shape:** {stats_dict['shape'][0]} rows × {stats_dict['shape'][1]} columns
+
+**Columns:** {', '.join(stats_dict['columns'])}
+
+**Missing Values:**
+{chr(10).join([f'• {k}: {v}' for k, v in stats_dict['missing'].items() if v > 0]) or '• No missing values'}
+
+**Numeric Statistics:**
+{pd.DataFrame(stats_dict['numeric_stats']).to_string() if stats_dict['numeric_stats'] else 'No numeric columns'}
+"""
+            
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"📊 Analyze `{data_file.name}`")
+            if user_message: st.session_state.messages.append(user_message)
+            
+            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", stats_text)
+            if assistant_message: st.session_state.messages.append(assistant_message)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Tool 3: Correlation Matrix
+        st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
+        if st.button("🔗 Correlation Matrix", use_container_width=True, help="Visualize correlations between variables"):
+            if st.session_state.current_session_id is None:
+                persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+            data_file = data_files[0]
+            data_file.seek(0)
+            if Path(data_file.name).suffix.lower() == '.csv':
+                df = pd.read_csv(data_file)
+            else:
+                df = pd.read_excel(data_file)
+            
+            fig = correlation_matrix(df)
+            
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"🔗 Show correlations in `{data_file.name}`")
+            if user_message: st.session_state.messages.append(user_message)
+            
+            if fig:
+                # Convert plotly figure to Python code for display
+                code_response = f"""```python
+import plotly.graph_objects as go
+import pandas as pd
+
+# Correlation matrix generated
+df = pd.read_csv('{data_file.name}')
+numeric_cols = df.select_dtypes(include=['number']).columns
+corr = df[numeric_cols].corr()
+
+fig = go.Figure(data=go.Heatmap(
+    z=corr.values,
+    x=corr.columns,
+    y=corr.columns,
+    colorscale='Viridis',
+    text=corr.values,
+    texttemplate='%{{text:.2f}}',
+    colorbar=dict(title="Correlation")
+))
+fig.update_layout(title='Correlation Matrix')
+apply_cosmic_theme(fig, 'Quantum Foam')
+```"""
+                st.session_state.dataframe_for_viz = df
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", code_response)
                 if assistant_message: st.session_state.messages.append(assistant_message)
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "⚠️ Not enough numeric columns for correlation analysis.")
+                if assistant_message: st.session_state.messages.append(assistant_message)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Tool 4: Trend Detector
+        st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
+        if st.button("📈 Trend Detector", use_container_width=True, help="Detect trends using regression analysis"):
+            if st.session_state.current_session_id is None:
+                persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+            data_file = data_files[0]
+            data_file.seek(0)
+            if Path(data_file.name).suffix.lower() == '.csv':
+                df = pd.read_csv(data_file)
+            else:
+                df = pd.read_excel(data_file)
+            
+            fig = trend_detection(df)
+            
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"📈 Detect trends in `{data_file.name}`")
+            if user_message: st.session_state.messages.append(user_message)
+            
+            if fig:
+                numeric_cols = df.select_dtypes(include=[np.number]).columns
+                col = numeric_cols[0]
+                code_response = f"""```python
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = pd.read_csv('{data_file.name}')
+col = '{col}'
+data = df[col].dropna()
+x = np.arange(len(data))
+slope, intercept, r_value, p_value, std_err = stats.linregress(x, data)
+
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=x, y=data, mode='markers', name='Data'))
+fig.add_trace(go.Scatter(x=x, y=slope*x + intercept, mode='lines', name=f'Trend (R²={{r_value**2:.3f}})'))
+fig.update_layout(title=f'Trend Analysis: {{col}}')
+apply_cosmic_theme(fig, 'Nebula Burst')
+```"""
+                st.session_state.dataframe_for_viz = df
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", code_response)
+                if assistant_message: st.session_state.messages.append(assistant_message)
+            else:
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "⚠️ No numeric columns found for trend analysis.")
+                if assistant_message: st.session_state.messages.append(assistant_message)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Tool 5: Distribution Analyzer
+        st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
+        if st.button("📉 Distribution Analyzer", use_container_width=True, help="Analyze data distribution patterns"):
+            if st.session_state.current_session_id is None:
+                persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+            data_file = data_files[0]
+            data_file.seek(0)
+            if Path(data_file.name).suffix.lower() == '.csv':
+                df = pd.read_csv(data_file)
+            else:
+                df = pd.read_excel(data_file)
+            
+            fig = distribution_analysis(df)
+            
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"📉 Analyze distribution in `{data_file.name}`")
+            if user_message: st.session_state.messages.append(user_message)
+            
+            if fig:
+                numeric_cols = df.select_dtypes(include=[np.number]).columns
+                col = numeric_cols[0]
+                code_response = f"""```python
+import plotly.graph_objects as go
+import pandas as pd
+
+df = pd.read_csv('{data_file.name}')
+col = '{col}'
+
+fig = go.Figure()
+fig.add_trace(go.Histogram(x=df[col], name='Distribution', marker=dict(color='#7C4DFF'), opacity=0.7))
+fig.update_layout(title=f'Distribution: {{col}}', xaxis_title=col, yaxis_title='Frequency')
+apply_cosmic_theme(fig, 'Supernova')
+```"""
+                st.session_state.dataframe_for_viz = df
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", code_response)
+                if assistant_message: st.session_state.messages.append(assistant_message)
+            else:
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "⚠️ No numeric columns found for distribution analysis.")
+                if assistant_message: st.session_state.messages.append(assistant_message)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
     
@@ -796,7 +1024,6 @@ Respond with only the Python code block, without any additional explanation.
             if message["role"] == "assistant":
                 col1, col2 = st.columns([10, 1])
                 with col1:
-                    # --- Feature: Enhanced Code Rendering ---
                     parts = message['content'].split('```')
                     for i, part in enumerate(parts):
                         if not part.strip():
@@ -807,40 +1034,34 @@ Respond with only the Python code block, without any additional explanation.
                             lang = lines[0].strip()
                             code = lines[1] if len(lines) > 1 else ""
 
-                            # --- Feature #10: Interactive Cosmic Visualizations ---
                             if lang == 'python':
                                 try:
-                                    # Prepare a safe execution scope
                                     local_scope = {
                                         'go': go,
                                         'px': px,
                                         'pd': pd,
+                                        'np': np,
+                                        'stats': stats,
                                         'apply_cosmic_theme': apply_cosmic_theme
                                     }
-                                    # Add dataframe to scope if it exists for visualization
                                     if 'dataframe_for_viz' in st.session_state and st.session_state.dataframe_for_viz is not None:
                                         local_scope['df'] = st.session_state.dataframe_for_viz
 
                                     exec(code, local_scope)
                                     
                                     if 'fig' in local_scope:
-                                        # A plot was successfully generated
                                         st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None)
-                                        # Clean up dataframe from session state after use
                                         if 'dataframe_for_viz' in st.session_state:
                                             st.session_state.dataframe_for_viz = None
                                     else:
-                                        # The python code did not generate a 'fig' object, so just show the code
                                         st.code(code, language='python')
 
-
                                 except Exception as e:
-                                    st.error(f"🔮 Cosmic Interference: Could not render visualization. Error: {e}")
-                                    st.code(code, language='python') # Show the code that failed
+                                    st.error(f"🔮 Cosmic Interference: {e}")
+                                    st.code(code, language='python')
                             else:
-                                # It's a code block, but not for a plot we can execute
                                 st.code(code, language=lang if lang else "plaintext")
-                        else: # Even-indexed parts are regular markdown text
+                        else:
                             st.markdown(part)
                 with col2:
                     if st.button("🔊", key=f"play_{message['timestamp']}", help="Read aloud"):
@@ -849,12 +1070,10 @@ Respond with only the Python code block, without any additional explanation.
             else:
                 st.markdown(message["content"])
 
-            # --- Feature: Proactive Follow-up Suggestions ---
             if message["role"] == "assistant" and message.get("suggestions"):
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown("###### You might also want to ask:")
+                st.markdown("##### 💡 Suggested questions:")
                 
-                # Use columns for a neat layout
                 num_suggestions = len(message["suggestions"])
                 cols = st.columns(num_suggestions)
                 for i, suggestion in enumerate(message["suggestions"]):
@@ -867,20 +1086,17 @@ Respond with only the Python code block, without any additional explanation.
                 for file_name in message["files"]:
                     st.caption(f"📎 {file_name}")
     
-    # Chat input in sidebar
+    # Chat input
     st.markdown("---")
-    prompt = st.text_area("Ask the cosmos...", key="chat_input", height=100)
-    send_button = st.button("🪄 Send", use_container_width=True)
+    prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
+    send_button = st.button("🪄 SEND", use_container_width=True)
     
     if send_button and prompt:
-        # Create new session if none exists
         if st.session_state.current_session_id is None:
             persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
             st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
 
-        # If a data file is attached, load it into a dataframe for visualization.
-        # This makes regular chat prompts visualization-aware, fixing the 'df is not defined' error.
-        st.session_state.dataframe_for_viz = None # Clear previous df
+        st.session_state.dataframe_for_viz = None
         if uploaded_files:
             data_files = [f for f in uploaded_files if Path(f.name).suffix.lower() in ['.csv', '.xls', '.xlsx']]
             if data_files:
@@ -891,9 +1107,8 @@ Respond with only the Python code block, without any additional explanation.
                 else:
                     df = pd.read_excel(data_file)
                 st.session_state.dataframe_for_viz = df
-                data_file.seek(0) # Reset pointer for the next processing step
+                data_file.seek(0)
 
-        # Process uploaded files
         file_names = []
         gemini_parts = []
         
@@ -908,7 +1123,6 @@ Respond with only the Python code block, without any additional explanation.
                         gemini_parts.append(f"--- Image: {uploaded_file.name} ---")
                         gemini_parts.append(content)
         
-        # Save user message to DB and add to session state
         user_message = save_message(
             db,
             st.session_state.current_session_id,
@@ -919,15 +1133,12 @@ Respond with only the Python code block, without any additional explanation.
         if user_message:
             st.session_state.messages.append(user_message)
         
-        # Get the persona for the current session
         session_persona_name = get_session_persona(db, st.session_state.current_session_id)
         cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
 
-        # Generate response
         response = get_cosmic_response(prompt, cosmic_context, parts=gemini_parts)
         suggestions = get_follow_up_suggestions(prompt, response)
         
-        # Add assistant response
         assistant_message = save_message(
             db,
             st.session_state.current_session_id,
@@ -938,10 +1149,9 @@ Respond with only the Python code block, without any additional explanation.
         if assistant_message:
             st.session_state.messages.append(assistant_message)
         
-        # Rerun to update chat
         st.rerun()
 
-    # Hidden audio player for Text-to-Speech
+    # Audio player for TTS
     if st.session_state.audio_to_play:
         try:
             tts = gTTS(text=st.session_state.audio_to_play, lang='en', slow=False)
@@ -960,5 +1170,4 @@ Respond with only the Python code block, without any additional explanation.
         except Exception as e:
             st.warning(f"Could not play audio: {e}")
         finally:
-            # Reset the state
             st.session_state.audio_to_play = None
