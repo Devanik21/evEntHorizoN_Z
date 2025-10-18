@@ -52,7 +52,7 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) # Using 1.5 for better multi-modal and code gen
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -490,6 +490,8 @@ def extract_text_from_txt(txt_file):
 def process_uploaded_file(uploaded_file):
     """Process uploaded file and extract content."""
     try:
+        # Reset file pointer to ensure it can be read, as it might have been read before.
+        uploaded_file.seek(0)
         file_extension = Path(uploaded_file.name).suffix.lower()
         
         if file_extension == '.pdf':
@@ -504,12 +506,15 @@ def process_uploaded_file(uploaded_file):
             else:
                 df = pd.read_excel(uploaded_file)
             
-            # For general queries, provide a summary
+            # For general queries, provide a summary with instructions for the AI
             buffer = io.StringIO()
             df.info(buf=buffer)
             info_str = buffer.getvalue()
             summary = f"""The user uploaded a data file named '{uploaded_file.name}'.
-Here is a summary of its content. Do not show the raw data unless asked.
+This file has been pre-loaded into a pandas DataFrame named `df` which is available in the code execution scope.
+When generating Python code for visualization, you MUST use this existing `df` variable directly. DO NOT try to read the file again (e.g., with `pd.read_csv('{uploaded_file.name}')`).
+
+Here is a summary of the `df` DataFrame:
 
 First 5 rows:
 {df.head().to_string()}
@@ -517,6 +522,8 @@ First 5 rows:
 Data columns and types:
 {info_str}
 """
+            # Reset pointer again for any subsequent processing in the app
+            uploaded_file.seek(0)
             return summary, "text"
         elif file_extension in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
             image = Image.open(uploaded_file)
