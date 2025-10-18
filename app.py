@@ -651,7 +651,7 @@ if "selected_persona" not in st.session_state:
 # Main content area
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
-<h1>EVENT HORIZON</h1>
+<h1>EVENT   HORIZON</h1>
 <h2 class='subtitle'></h2>
 """, unsafe_allow_html=True)
 st.markdown("<br><br>", unsafe_allow_html=True)
