@@ -1031,8 +1031,7 @@ apply_cosmic_theme(fig, 'Supernova')
                                     
                                     if 'fig' in local_scope:
                                         st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None)
-                                        if 'dataframe_for_viz' in st.session_state:
-                                            st.session_state.dataframe_for_viz = None
+                                        # Don't clear dataframe - keep it for subsequent charts
                                     else:
                                         st.code(code, language='python')
 
