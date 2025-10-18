@@ -876,13 +876,11 @@ Create a single visualization in ```python block. Final figure must be `fig`. Us
             if user_message: st.session_state.messages.append(user_message)
             
             if fig:
-                # Convert plotly figure to Python code for display
+                # Use pre-loaded df variable
                 code_response = f"""```python
 import plotly.graph_objects as go
-import pandas as pd
 
-# Correlation matrix generated
-df = pd.read_csv('{data_file.name}')
+# Using pre-loaded DataFrame 'df'
 numeric_cols = df.select_dtypes(include=['number']).columns
 corr = df[numeric_cols].corr()
 
@@ -931,11 +929,10 @@ apply_cosmic_theme(fig, 'Quantum Foam')
                 col = numeric_cols[0]
                 code_response = f"""```python
 import plotly.graph_objects as go
-import pandas as pd
 import numpy as np
 from scipy import stats
 
-df = pd.read_csv('{data_file.name}')
+# Using pre-loaded DataFrame 'df'
 col = '{col}'
 data = df[col].dropna()
 x = np.arange(len(data))
@@ -980,9 +977,8 @@ apply_cosmic_theme(fig, 'Nebula Burst')
                 col = numeric_cols[0]
                 code_response = f"""```python
 import plotly.graph_objects as go
-import pandas as pd
 
-df = pd.read_csv('{data_file.name}')
+# Using pre-loaded DataFrame 'df'
 col = '{col}'
 
 fig = go.Figure()
