@@ -659,7 +659,7 @@ st.markdown("<br><br>", unsafe_allow_html=True)
 # Footer in main area
 st.markdown("""
 <hr>
-<p class='footer'></p>
+<p class='footer'>Understand The Universe</p>
 """, unsafe_allow_html=True)
 
 # Sidebar with chat interface
