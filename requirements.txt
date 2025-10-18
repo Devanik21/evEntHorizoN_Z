@@ -7,3 +7,4 @@ tinydb
 gTTS 
 plotly
 openpyxl
+scipy
