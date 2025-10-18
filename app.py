@@ -54,7 +54,7 @@ st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="cente
 # --- CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemma-27b-it')
 except Exception as e:
     st.error(f"⚠️ API Configuration Error: {str(e)}")
 
@@ -652,20 +652,20 @@ if "selected_persona" not in st.session_state:
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
 <h1>EVENT HORIZON</h1>
-<h2 class='subtitle'>⚛️ Explore • Analyze • Transcend ⚛️</h2>
+<h2 class='subtitle'>Understand The Universe</h2>
 """, unsafe_allow_html=True)
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 # Footer in main area
 st.markdown("""
 <hr>
-<p class='footer'>🌠 POWERED BY COSMIC INTELLIGENCE 🌠</p>
+<p class='footer'>Cosmic AI</p>
 """, unsafe_allow_html=True)
 
 # Sidebar with chat interface
 with st.sidebar:
     # --- Persona Selection ---
-    st.markdown("### 🧠 AI PERSONA")
+    st.markdown("### 🎓 AI PERSONA")
     st.session_state.selected_persona = st.selectbox(
         "Choose the AI's identity",
         options=list(PERSONAS.keys()),
@@ -756,7 +756,7 @@ with st.sidebar:
             )
 
     st.markdown("---")
-    st.markdown("### 🔮 COSMIC CHAT")
+    st.markdown("### COSMIC CHAT")
     
     # File uploader
     uploaded_files = st.file_uploader(
@@ -1070,7 +1070,7 @@ apply_cosmic_theme(fig, 'Supernova')
     # Chat input
     st.markdown("---")
     prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
-    send_button = st.button("🪄 SEND", use_container_width=True)
+    send_button = st.button("SEND", use_container_width=True)
     
     if send_button and prompt:
         if st.session_state.current_session_id is None:
