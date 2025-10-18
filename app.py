@@ -49,7 +49,7 @@ PERSONAS = {
 }
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="evEnt HorizoN", page_icon="♾️", layout="centered")
+st.set_page_config(page_title="evEnt HorizoN", page_icon="⚫", layout="centered")
 
 # --- CONFIGURE GEMINI API ---
 try:
@@ -652,20 +652,20 @@ if "selected_persona" not in st.session_state:
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
 <h1>EVENT HORIZON</h1>
-<h2 class='subtitle'>⚛️ Explore • Analyze • Transcend ⚛️</h2>
+<h2 class='subtitle'>EXPLORE • ANALYZE • TRANSCEND</h2>
 """, unsafe_allow_html=True)
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 # Footer in main area
 st.markdown("""
 <hr>
-<p class='footer'>🌠 POWERED BY COSMIC INTELLIGENCE 🌠</p>
+<p class='footer'>POWERED BY COSMIC INTELLIGENCE</p>
 """, unsafe_allow_html=True)
 
 # Sidebar with chat interface
 with st.sidebar:
     # --- Persona Selection ---
-    st.markdown("### 🧠 AI PERSONA")
+    st.markdown("### AI PERSONA")
     st.session_state.selected_persona = st.selectbox(
         "Choose the AI's identity",
         options=list(PERSONAS.keys()),
@@ -673,23 +673,23 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-    st.markdown("### 🌌 CHAT SESSIONS")
+    st.markdown("### CHAT SESSIONS")
     
     # New chat button
     col1, col2 = st.columns([3, 1])
     with col1:
-        if st.button("✨ New Chat", use_container_width=True):
+        if st.button("+ New Chat", use_container_width=True):
             new_session_id = create_new_session(db, persona_name=st.session_state.selected_persona)
             st.session_state.current_session_id = new_session_id
             st.session_state.messages = []
             st.rerun()
     
     with col2:
-        if st.button("🔄", use_container_width=True):
+        if st.button("↻", use_container_width=True):
             st.rerun()
     
     # Search bar
-    search_query = st.text_input("🔍 Search history...", placeholder="Filter by name...")
+    search_query = st.text_input("Search history...", placeholder="Filter by name...")
 
     # Load existing sessions
     sessions = get_all_sessions(db)
@@ -708,7 +708,7 @@ with st.sidebar:
             
             with col1:
                 if st.button(
-                    f"💬 {session_name}",
+                    f"» {session_name}",
                     key=f"load_{session_id}",
                     use_container_width=True
                 ):
@@ -717,7 +717,7 @@ with st.sidebar:
                     st.rerun()
             
             with col2:
-                if st.button("🗑️", key=f"delete_{session_id}"):
+                if st.button("×", key=f"delete_{session_id}"):
                     delete_session(db, session_id)
                     if st.session_state.current_session_id == session_id:
                         st.session_state.current_session_id = None
@@ -733,22 +733,22 @@ with st.sidebar:
         if st.session_state.get('renaming_session_id') == st.session_state.current_session_id:
             with st.form(key='rename_form'):
                 new_name_input = st.text_input("Enter new name", value=current_name)
-                if st.form_submit_button("💾 Save"):
+                if st.form_submit_button("Save"):
                     rename_session(db, st.session_state.current_session_id, new_name_input)
                     del st.session_state.renaming_session_id
                     st.rerun()
         else:
-            st.caption(f"📍 {current_name}")
+            st.caption(f"• {current_name}")
 
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("✏️ Rename", use_container_width=True):
+            if st.button("Rename", use_container_width=True):
                 st.session_state.renaming_session_id = st.session_state.current_session_id
                 st.rerun()
         with col2:
             markdown_export = format_chat_as_markdown(st.session_state.messages, current_name)
             st.download_button(
-                label="📥 Export",
+                label="Export",
                 data=markdown_export,
                 file_name=f"{current_name.replace(' ', '_')}.md",
                 mime="text/markdown",
@@ -756,11 +756,11 @@ with st.sidebar:
             )
 
     st.markdown("---")
-    st.markdown("### 🔮 COSMIC CHAT")
+    st.markdown("### COSMIC CHAT")
     
     # File uploader
     uploaded_files = st.file_uploader(
-        "📎 Attach files",
+        "Attach files",
         type=['pdf', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'csv', 'xls', 'xlsx'],
         accept_multiple_files=True,
         key="file_uploader"
@@ -769,17 +769,17 @@ with st.sidebar:
     if uploaded_files:
         st.markdown("##### ATTACHED FILES:")
         for file in uploaded_files:
-            st.markdown(f'<div class="file-badge">📄 {file.name}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="file-badge">• {file.name}</div>', unsafe_allow_html=True)
     
     # --- DATA TOOLS (Enhanced with 4 new tools) ---
     data_files = [f for f in uploaded_files if Path(f.name).suffix.lower() in ['.csv', '.xls', '.xlsx']] if uploaded_files else []
     if data_files:
         st.markdown("---")
-        st.markdown("#### 🪄 DATA TOOLS")
+        st.markdown("#### DATA TOOLS")
 
         # Tool 1: Magic Visualizer
         st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
-        if st.button("✨ Magic Visualizer", use_container_width=True, help="AI-powered auto visualization"):
+        if st.button("Magic Visualizer", use_container_width=True, help="AI-powered auto visualization"):
             if st.session_state.current_session_id is None:
                 persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
                 st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
@@ -807,7 +807,7 @@ Info:
 ```
 Create a single visualization in ```python block. Final figure must be `fig`. Use apply_cosmic_theme(fig, 'Theme Name')."""
             
-            user_message_content = f"🎨 Visualize `{data_file.name}`"
+            user_message_content = f"Visualize `{data_file.name}`"
             user_message = save_message(db, st.session_state.current_session_id, "user", user_message_content)
             if user_message: st.session_state.messages.append(user_message)
 
@@ -822,7 +822,7 @@ Create a single visualization in ```python block. Final figure must be `fig`. Us
 
         # Tool 2: Statistical Analyzer
         st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
-        if st.button("📊 Statistical Analyzer", use_container_width=True, help="Comprehensive statistical analysis"):
+        if st.button("Statistical Analyzer", use_container_width=True, help="Comprehensive statistical analysis"):
             if st.session_state.current_session_id is None:
                 persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
                 st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
@@ -835,20 +835,20 @@ Create a single visualization in ```python block. Final figure must be `fig`. Us
                 df = pd.read_excel(data_file)
             
             stats_dict = statistical_analysis(df)
-            stats_text = f"""📊 **Statistical Analysis Report**
+            stats_text = f"""STATISTICAL ANALYSIS REPORT
 
-**Dataset Shape:** {stats_dict['shape'][0]} rows × {stats_dict['shape'][1]} columns
+Dataset Shape: {stats_dict['shape'][0]} rows × {stats_dict['shape'][1]} columns
 
-**Columns:** {', '.join(stats_dict['columns'])}
+Columns: {', '.join(stats_dict['columns'])}
 
-**Missing Values:**
+Missing Values:
 {chr(10).join([f'• {k}: {v}' for k, v in stats_dict['missing'].items() if v > 0]) or '• No missing values'}
 
-**Numeric Statistics:**
+Numeric Statistics:
 {pd.DataFrame(stats_dict['numeric_stats']).to_string() if stats_dict['numeric_stats'] else 'No numeric columns'}
 """
             
-            user_message = save_message(db, st.session_state.current_session_id, "user", f"📊 Analyze `{data_file.name}`")
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"Analyze `{data_file.name}`")
             if user_message: st.session_state.messages.append(user_message)
             
             assistant_message = save_message(db, st.session_state.current_session_id, "assistant", stats_text)
@@ -858,7 +858,7 @@ Create a single visualization in ```python block. Final figure must be `fig`. Us
 
         # Tool 3: Correlation Matrix
         st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
-        if st.button("🔗 Correlation Matrix", use_container_width=True, help="Visualize correlations between variables"):
+        if st.button("Correlation Matrix", use_container_width=True, help="Visualize correlations between variables"):
             if st.session_state.current_session_id is None:
                 persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
                 st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
@@ -872,7 +872,7 @@ Create a single visualization in ```python block. Final figure must be `fig`. Us
             
             fig = correlation_matrix(df)
             
-            user_message = save_message(db, st.session_state.current_session_id, "user", f"🔗 Show correlations in `{data_file.name}`")
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"Show correlations in `{data_file.name}`")
             if user_message: st.session_state.messages.append(user_message)
             
             if fig:
@@ -900,14 +900,14 @@ apply_cosmic_theme(fig, 'Quantum Foam')
                 assistant_message = save_message(db, st.session_state.current_session_id, "assistant", code_response)
                 if assistant_message: st.session_state.messages.append(assistant_message)
             else:
-                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "⚠️ Not enough numeric columns for correlation analysis.")
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "Not enough numeric columns for correlation analysis.")
                 if assistant_message: st.session_state.messages.append(assistant_message)
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
         # Tool 4: Trend Detector
         st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
-        if st.button("📈 Trend Detector", use_container_width=True, help="Detect trends using regression analysis"):
+        if st.button("Trend Detector", use_container_width=True, help="Detect trends using regression analysis"):
             if st.session_state.current_session_id is None:
                 persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
                 st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
@@ -921,7 +921,7 @@ apply_cosmic_theme(fig, 'Quantum Foam')
             
             fig = trend_detection(df)
             
-            user_message = save_message(db, st.session_state.current_session_id, "user", f"📈 Detect trends in `{data_file.name}`")
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"Detect trends in `{data_file.name}`")
             if user_message: st.session_state.messages.append(user_message)
             
             if fig:
@@ -948,14 +948,14 @@ apply_cosmic_theme(fig, 'Nebula Burst')
                 assistant_message = save_message(db, st.session_state.current_session_id, "assistant", code_response)
                 if assistant_message: st.session_state.messages.append(assistant_message)
             else:
-                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "⚠️ No numeric columns found for trend analysis.")
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "No numeric columns found for trend analysis.")
                 if assistant_message: st.session_state.messages.append(assistant_message)
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
         # Tool 5: Distribution Analyzer
         st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
-        if st.button("📉 Distribution Analyzer", use_container_width=True, help="Analyze data distribution patterns"):
+        if st.button("Distribution Analyzer", use_container_width=True, help="Analyze data distribution patterns"):
             if st.session_state.current_session_id is None:
                 persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
                 st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
@@ -969,7 +969,7 @@ apply_cosmic_theme(fig, 'Nebula Burst')
             
             fig = distribution_analysis(df)
             
-            user_message = save_message(db, st.session_state.current_session_id, "user", f"📉 Analyze distribution in `{data_file.name}`")
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"Analyze distribution in `{data_file.name}`")
             if user_message: st.session_state.messages.append(user_message)
             
             if fig:
@@ -990,7 +990,7 @@ apply_cosmic_theme(fig, 'Supernova')
                 assistant_message = save_message(db, st.session_state.current_session_id, "assistant", code_response)
                 if assistant_message: st.session_state.messages.append(assistant_message)
             else:
-                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "⚠️ No numeric columns found for distribution analysis.")
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "No numeric columns found for distribution analysis.")
                 if assistant_message: st.session_state.messages.append(assistant_message)
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -999,7 +999,7 @@ apply_cosmic_theme(fig, 'Supernova')
     
     # Display chat messages
     for message in st.session_state.messages:
-        avatar = "🌌" if message["role"] == "assistant" else "🧑‍🚀"
+        avatar = "AI" if message["role"] == "assistant" else "USER"
         with st.chat_message(message["role"], avatar=avatar):
             if message["role"] == "assistant":
                 col1, col2 = st.columns([10, 1])
@@ -1045,7 +1045,7 @@ apply_cosmic_theme(fig, 'Supernova')
                         else:
                             st.markdown(part)
                 with col2:
-                    if st.button("🔊", key=f"play_{message['timestamp']}", help="Read aloud"):
+                    if st.button("♪", key=f"play_{message['timestamp']}", help="Read aloud"):
                         st.session_state.audio_to_play = message['content']
                         st.rerun()
             else:
@@ -1053,7 +1053,7 @@ apply_cosmic_theme(fig, 'Supernova')
 
             if message["role"] == "assistant" and message.get("suggestions"):
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown("##### 💡 Suggested questions:")
+                st.markdown("##### Suggested questions:")
                 
                 num_suggestions = len(message["suggestions"])
                 cols = st.columns(num_suggestions)
@@ -1065,12 +1065,12 @@ apply_cosmic_theme(fig, 'Supernova')
 
             if "files" in message and message["files"]:
                 for file_name in message["files"]:
-                    st.caption(f"📎 {file_name}")
+                    st.caption(f"• {file_name}")
     
     # Chat input
     st.markdown("---")
-    prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
-    send_button = st.button("🪄 SEND", use_container_width=True)
+    prompt = st.text_area("Ask the cosmos...", key="chat_input", height=100)
+    send_button = st.button("SEND", use_container_width=True)
     
     if send_button and prompt:
         if st.session_state.current_session_id is None:
