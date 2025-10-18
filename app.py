@@ -611,7 +611,32 @@ with st.sidebar:
             if message["role"] == "assistant":
                 col1, col2 = st.columns([10, 1])
                 with col1:
-                    st.markdown(message["content"])
+                    # --- Feature: Enhanced Code Rendering ---
+                    # Split the content by the code block delimiter to handle text and code separately
+                    parts = message['content'].split('```')
+                    for i, part in enumerate(parts):
+                        if not part.strip():
+                            continue
+                        
+                        # Odd-indexed parts are code blocks
+                        if i % 2 == 1:
+                            lines = part.split('\n', 1)
+                            lang = lines[0].strip()
+                            
+                            if len(lines) > 1:
+                                code = lines[1]
+                            else:
+                                # This case is unlikely but handles a code block with no content
+                                code = ""
+
+                            # If no language is specified, default to plaintext and use the whole part as code
+                            if not lang:
+                                lang = "plaintext"
+                                code = part
+                            
+                            st.code(code, language=lang)
+                        else: # Even-indexed parts are regular markdown text
+                            st.markdown(part)
                 with col2:
                     if st.button("🔊", key=f"play_{message['timestamp']}", help="Read aloud"):
                         st.session_state.audio_to_play = message['content']
