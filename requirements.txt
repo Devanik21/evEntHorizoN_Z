@@ -8,3 +8,4 @@ gTTS
 plotly
 openpyxl
 scipy
+statsmodels
