@@ -75,7 +75,8 @@ def create_new_session(db, session_name=None, persona_name="Cosmic Intelligence"
         'session_name': session_name,
         'persona_name': persona_name,
         'created_at': datetime.now().isoformat(),
-        'messages': []
+        'messages': [],
+        'dynamic_persona_description': None
     })
     return session_id
 
@@ -586,6 +587,40 @@ Data columns and types:
     except Exception as e:
         return f"Error processing file: {str(e)}", "error"
 
+def generate_cognitive_twin_persona(user_messages_text):
+    """Analyzes user text and generates a dynamic persona description for the AI."""
+    if not user_messages_text.strip():
+        # Initial persona for the very first message
+        return "You are a nascent Cognitive Twin, just beginning to understand the user. Be curious, open, and ask clarifying questions to learn their communication style. Your goal is to eventually mirror their way of thinking and communicating." + "\n" + VISUALIZATION_INSTRUCTIONS
+
+    persona_generation_prompt = f"""
+You are an expert in psycholinguistics and communication style analysis.
+Your task is to create a persona description for an AI assistant that will act as a "Cognitive Twin" to a user.
+Analyze the provided text from the user to understand their communication and thinking style. Consider:
+- **Vocabulary:** Is it simple, complex, technical, artistic, formal, or informal?
+- **Tone:** Is it inquisitive, declarative, humorous, serious, skeptical, or enthusiastic?
+- **Sentence Structure:** Are sentences short and direct, or long and complex?
+- **Topics of Interest:** What subjects or domains does the user focus on?
+- **Thinking Style:** Do they seem more analytical, creative, philosophical, or practical?
+
+Based on your analysis, write a concise set of instructions for an AI. This persona description should guide the AI to mirror the user's style, creating a hyper-personalized intellectual partner. The description MUST start with "You are a Cognitive Twin to the user." Do not add any preamble.
+
+**User's Accumulated Text:**
+---
+{user_messages_text}
+---
+
+**AI Persona Description (Instructions for the AI):**
+"""
+    try:
+        response = model.generate_content(persona_generation_prompt)
+        # Add the visualization instructions back in, as they are not part of the persona generation
+        return response.text.strip() + "\n" + VISUALIZATION_INSTRUCTIONS
+    except Exception as e:
+        # Fallback persona in case of an error during evolution
+        fallback_persona = f"You are a Cognitive Twin to the user, but an error occurred during persona evolution: {e}. Default to being an adaptive, curious, and helpful assistant."
+        return fallback_persona + "\n" + VISUALIZATION_INSTRUCTIONS
+
 def get_cosmic_response(prompt, cosmic_context, parts=None):
     """Generate response using Gemini API with multi-modal context."""
     try:
@@ -667,12 +702,23 @@ st.markdown("""
 with st.sidebar:
     # --- Persona Selection ---
     st.markdown("### 🎓 AI PERSONA")
+    st.markdown("<small>The selected persona applies to new chats. 'Cognitive Twin' evolves to match your style.</small>", unsafe_allow_html=True)
+
+    PERSONA_OPTIONS = ["Cognitive Twin"] + list(PERSONAS.keys())
+
+    # The selectbox controls the persona for the *next* new chat
     st.session_state.selected_persona = st.selectbox(
-        "Choose the AI's identity",
-        options=list(PERSONAS.keys()),
-        index=list(PERSONAS.keys()).index(st.session_state.selected_persona),
-        label_visibility="collapsed"
+        "Persona for new chats",
+        options=PERSONA_OPTIONS,
+        index=PERSONA_OPTIONS.index(st.session_state.selected_persona) if st.session_state.selected_persona in PERSONA_OPTIONS else 0,
+        label_visibility="collapsed",
+        help="Select a pre-defined persona or the 'Cognitive Twin' which adapts to your style."
     )
+
+    # Display the persona of the active chat
+    if st.session_state.current_session_id:
+        active_persona = get_session_persona(db, st.session_state.current_session_id)
+        st.caption(f"Active Persona: **{active_persona}**")
 
     st.markdown("### 🌌 CHAT SESSIONS")
     
@@ -715,6 +761,7 @@ with st.sidebar:
                 ):
                     st.session_state.current_session_id = session_id
                     st.session_state.messages = load_session_messages(db, session_id)
+                    st.session_state.selected_persona = get_session_persona(db, session_id) # Update selector state
                     st.rerun()
             
             with col2:
@@ -1208,8 +1255,26 @@ apply_cosmic_theme(fig, 'Supernova')
             st.session_state.messages.append(user_message)
         
         session_persona_name = get_session_persona(db, st.session_state.current_session_id)
-        cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
+        
+        # --- Persona Logic: Use Cognitive Twin or a pre-defined persona ---
+        if session_persona_name == "Cognitive Twin":
+            with st.spinner("🧠 Cognitive Twin is evolving..."):
+                # Gather all user messages for this session to build the persona
+                all_session_messages = load_session_messages(db, st.session_state.current_session_id)
+                user_messages_text = "\n".join([msg['content'] for msg in all_session_messages if msg['role'] == 'user'])
+                
+                # Add the current prompt to the text to be analyzed for the most up-to-date persona
+                user_messages_text += "\n" + prompt
 
+                # Generate the dynamic persona for this specific interaction
+                cosmic_context = generate_cognitive_twin_persona(user_messages_text)
+                
+                # Save the latest evolved persona description to the session for future reference
+                sessions_table = db.table('sessions')
+                sessions_table.update({'dynamic_persona_description': cosmic_context}, doc_ids=[st.session_state.current_session_id])
+        else:
+            cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
+            
         response = get_cosmic_response(prompt, cosmic_context, parts=gemini_parts)
         suggestions = get_follow_up_suggestions(prompt, response)
         
