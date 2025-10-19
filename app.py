@@ -968,9 +968,76 @@ Your task is to take a user's description of a web tool or dashboard and generat
     
     # --- DATA TOOLS (Enhanced with 4 new tools) ---
     data_files = [f for f in uploaded_files if Path(f.name).suffix.lower() in ['.csv', '.xls', '.xlsx']] if uploaded_files else []
+    text_files = [f for f in uploaded_files if Path(f.name).suffix.lower() in ['.pdf', '.docx', '.txt']] if uploaded_files else []
+
     if data_files:
         st.markdown("---")
         st.markdown("#### 🪄 DATA TOOLS")
+
+        # New Tool: Hypothesis Engine
+        if text_files:
+            st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
+            if st.button("🔬 Hypothesis Engine", use_container_width=True, help="Generate hypotheses from data and research papers."):
+                if st.session_state.current_session_id is None:
+                    persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                    st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+                data_file = data_files[0]
+                text_file = text_files[0]
+
+                user_message = save_message(db, st.session_state.current_session_id, "user", f"🔬 Run Hypothesis Engine on `{data_file.name}` and `{text_file.name}`.")
+                if user_message: st.session_state.messages.append(user_message)
+
+                with st.spinner("🔬 Generating hypotheses..."):
+                    try:
+                        # Process data file
+                        data_file.seek(0)
+                        df = pd.read_csv(data_file) if Path(data_file.name).suffix.lower() == '.csv' else pd.read_excel(data_file)
+                        st.session_state.dataframe_for_viz = df
+
+                        buffer = io.StringIO()
+                        df.info(buf=buffer)
+                        data_summary = f"Data Summary from '{data_file.name}':\nFirst 5 rows:\n{df.head().to_string()}\n\nData columns and types:\n{buffer.getvalue()}"
+
+                        # Process text file
+                        text_content, content_type = process_uploaded_file(text_file)
+                        if content_type == 'error':
+                            raise ValueError(text_content)
+
+                        HYPOTHESIS_ENGINE_PROMPT = f"""You are a world-class research scientist and data analyst acting as a "Hypothesis Engine".
+Your task is to cross-reference a research paper with a dataset to generate novel, testable scientific hypotheses.
+
+**CONTEXT:**
+1.  **Research Paper Context:** The full text of a research paper.
+2.  **Dataset Summary:** A summary of a dataset. The full dataset is available in a pandas DataFrame named `df`.
+
+**INSTRUCTIONS:**
+1.  **Analyze and Synthesize:** Read the paper to understand its background, methods, and conclusions. Analyze the dataset summary.
+2.  **Generate Hypotheses:** Based on the intersection of the paper's context and the data, generate 2-3 novel, testable hypotheses.
+3.  **Structure Your Response:** For each hypothesis, provide:
+    *   **Hypothesis:** State the hypothesis clearly.
+    *   **Rationale:** Explain why this hypothesis is relevant, based on the paper.
+    *   **Experimental Design:** Outline a plan to test this hypothesis using the dataset.
+    *   **Statistical Test Code:** Provide a Python code block for an initial statistical test. The code MUST use `plotly` for any visualizations, assume data is in a DataFrame `df`, and use `apply_cosmic_theme(fig, 'Theme Name')`.
+
+---
+**Research Paper Context (`{text_file.name}`):**
+{text_content}
+---
+**Dataset Summary (`{data_file.name}`):**
+{data_summary}
+---
+
+Begin your analysis now."""
+                        response = model.generate_content(HYPOTHESIS_ENGINE_PROMPT)
+                        analysis_report = response.text
+                    except Exception as e:
+                        analysis_report = f"🔬 Cosmic interference during hypothesis generation: {e}"
+
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", analysis_report)
+                if assistant_message: st.session_state.messages.append(assistant_message)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
         # Tool 0: Precognitive Analysis
         st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
