@@ -666,6 +666,62 @@ def format_chat_as_markdown(messages, session_name):
         md_string += "---\n\n"
     return md_string
 
+def run_sentinel_analysis(db):
+    """Continuously analyzes data in the background and proactively sends findings."""
+    if not st.session_state.get('sentinel_active') or not st.session_state.get('current_session_id'):
+        return
+
+    # Throttle the analysis to run every 10 seconds max to avoid excessive reruns
+    now = datetime.now()
+    last_run = st.session_state.get('sentinel_last_run', datetime.min)
+    if (now - last_run).total_seconds() < 10:
+        return
+    st.session_state.sentinel_last_run = now
+
+    df = st.session_state.get('sentinel_dataframe')
+    if df is None:
+        st.session_state.sentinel_active = False # Deactivate if dataframe is lost
+        return
+
+    # --- Analysis Step 1: Check for significant trends ---
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    for col in numeric_cols:
+        finding_key = f"trend_{col}"
+        if finding_key in st.session_state.sentinel_reported_findings:
+            continue
+
+        data = df[col].dropna()
+        if len(data) < 10: # Need a minimum number of data points
+            continue
+            
+        x = np.arange(len(data))
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x, data)
+
+        # Define "significant" as a strong correlation and statistically significant p-value
+        if r_value**2 > 0.7 and p_value < 0.05:
+            # --- Finding Discovered: Generate Proactive Message ---
+            explanation_prompt = f"""
+As a Data Sentinel AI, you have discovered a significant trend in the user's data.
+The column is '{col}'. The linear regression resulted in an R-squared value of {r_value**2:.3f} and a p-value of {p_value:.4f}.
+Explain this finding to the user in a clear, concise, and insightful way. Start your response with "🛰️ **Precognitive Analysis:** I've detected a significant trend...".
+"""
+            session_persona_name = get_session_persona(db, st.session_state.current_session_id)
+            cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
+            explanation = get_cosmic_response(explanation_prompt, cosmic_context)
+
+            code_response = f"""```python
+import plotly.graph_objects as go; import numpy as np; from scipy import stats
+col = '{col}'; data = df[col].dropna(); x = np.arange(len(data)); slope, intercept, r_value, p_value, std_err = stats.linregress(x, data)
+fig = go.Figure(); fig.add_trace(go.Scatter(x=x, y=data, mode='markers', name='Data')); fig.add_trace(go.Scatter(x=x, y=slope*x + intercept, mode='lines', name=f'Trend (R²={{r_value**2:.3f}})')); fig.update_layout(title=f'Sentinel Discovery: Trend in {{col}}'); apply_cosmic_theme(fig, 'Nebula Burst')
+```"""
+            
+            full_message = f"{explanation}\n\nHere is a visualization of the trend:\n{code_response}"
+            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", full_message)
+            if assistant_message: st.session_state.messages.append(assistant_message)
+            st.session_state.sentinel_reported_findings.add(finding_key)
+            st.rerun()
+            return # Report one finding per cycle
+
 # --- APP LAYOUT ---
 set_page_background_and_style('black_hole (1).png')
 
@@ -683,6 +739,14 @@ if "dataframe_for_viz" not in st.session_state:
     st.session_state.dataframe_for_viz = None
 if "selected_persona" not in st.session_state:
     st.session_state.selected_persona = "Cosmic Intelligence"
+if "sentinel_active" not in st.session_state:
+    st.session_state.sentinel_active = False
+if "sentinel_dataframe" not in st.session_state:
+    st.session_state.sentinel_dataframe = None
+if "sentinel_reported_findings" not in st.session_state:
+    st.session_state.sentinel_reported_findings = set()
+if "sentinel_last_run" not in st.session_state:
+    st.session_state.sentinel_last_run = datetime.min
 
 # Main content area
 st.markdown("<br>", unsafe_allow_html=True)
@@ -917,6 +981,44 @@ Your task is to take a user's description of a web tool or dashboard and generat
         st.markdown("---")
         st.markdown("#### 🪄 DATA TOOLS")
 
+        # Tool 0: Precognitive Analysis Sentinel
+        st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
+        if st.session_state.get('sentinel_active'):
+            if st.button("🛰️ Deactivate Data Sentinel", use_container_width=True, help="Stop continuous background analysis."):
+                st.session_state.sentinel_active = False
+                st.session_state.sentinel_dataframe = None
+                st.session_state.sentinel_reported_findings = set()
+                
+                user_message = save_message(db, st.session_state.current_session_id, "user", "Deactivate the Data Sentinel.")
+                if user_message: st.session_state.messages.append(user_message)
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "🛰️ Data Sentinel deactivated. I will no longer proactively analyze your data.")
+                if assistant_message: st.session_state.messages.append(assistant_message)
+                st.rerun()
+        else:
+            if st.button("🛰️ Activate Data Sentinel", use_container_width=True, help="Continuously analyze data for new insights."):
+                if st.session_state.current_session_id is None:
+                    persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                    st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+                data_file = data_files[0]
+                data_file.seek(0)
+                if Path(data_file.name).suffix.lower() == '.csv':
+                    df = pd.read_csv(data_file)
+                else:
+                    df = pd.read_excel(data_file)
+                
+                st.session_state.sentinel_active = True
+                st.session_state.sentinel_dataframe = df
+                st.session_state.sentinel_reported_findings = set()
+                st.session_state.dataframe_for_viz = df # Also set this for other tools
+
+                user_message = save_message(db, st.session_state.current_session_id, "user", f"Activate the Data Sentinel on `{data_file.name}`.")
+                if user_message: st.session_state.messages.append(user_message)
+                assistant_message = save_message(db, st.session_state.current_session_id, "assistant", "🛰️ **Precognitive Analysis Activated.** I am now continuously monitoring your data. I will proactively message you if I discover any significant trends, anomalies, or correlations.")
+                if assistant_message: st.session_state.messages.append(assistant_message)
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
         # Tool 1: Magic Visualizer
         st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
         if st.button("✨ Magic Visualizer", use_container_width=True, help="AI-powered auto visualization"):
@@ -1136,6 +1238,9 @@ apply_cosmic_theme(fig, 'Supernova')
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
+    
+    # --- RUN PRECOGNITIVE ANALYSIS ---
+    run_sentinel_analysis(db)
     
     # Display chat messages
     for message in st.session_state.messages:
