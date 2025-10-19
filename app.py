@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 from tinydb import TinyDB, Query
 import io
+import zipfile
 import pandas as pd
 import numpy as np
 
@@ -770,59 +771,79 @@ with st.sidebar:
             if app_description:
                 with st.spinner("🛠️ Architecting your application... Please wait."):
                     GENESIS_ENGINE_PROMPT = f"""
-You are the Genesis Engine, an expert AI software architect specializing in creating self-contained, single-file Streamlit applications.
-Your task is to take a user's description of a web tool or dashboard and generate a complete, functional, and well-documented Python script for a Streamlit app.
+You are the Genesis Engine, an expert AI software architect specializing in creating self-contained, multi-file Streamlit applications.
+Your task is to take a user's description of a web tool or dashboard and generate all the necessary files, packaged as a JSON object.
 
 **Instructions:**
-1.  **Standalone Script:** The generated code MUST be a single, complete Python file (`.py`).
-2.  **Imports:** Include all necessary imports at the top of the script.
-3.  **Data Handling:** If the app requires data, use pandas DataFrames. For sample data, generate it directly within the script (e.g., `pd.DataFrame(...)`) or provide clear instructions on how the user should provide their data (e.g., a file uploader).
+1.  **Multi-File Structure:** The application might consist of multiple files (e.g., `app.py`, `utils.py`, `requirements.txt`, `.streamlit/config.toml`). The main Streamlit script should be named `app.py`.
+2.  **Imports:** Include all necessary imports in the relevant files. A `requirements.txt` file should be generated.
+3.  **Data Handling:** If the app requires data, use pandas DataFrames. For sample data, generate it directly within the script or provide clear instructions for the user (e.g., a file uploader in `app.py`).
 4.  **Visualizations:** Use Plotly for any charts or graphs.
 5.  **Clarity and Comments:** The code should be clean, well-organized, and include comments to explain complex parts.
 6.  **Error Handling:** Include basic error handling where appropriate (e.g., for file uploads or API calls).
-7.  **Output Format:** Your response MUST contain ONLY the Python code for the Streamlit app, enclosed in a single ```python ... ``` block. Do not include any other text, explanations, or apologies outside of the code block.
+7.  **Output Format:** Your response MUST be a single JSON object.
+    - The JSON object should contain file paths as keys and the file content as string values.
+    - All code and text content must be properly escaped for JSON.
+    - Example JSON structure:
+      ```json
+      {{
+        "app.py": "import streamlit as st\\n\\nst.write('Hello, World!')",
+        "requirements.txt": "streamlit\\npandas",
+        "utils/helpers.py": "def helper_function():\\n    return 'Helper'"
+      }}
+      ```
+    - Your entire response must be a single, valid JSON object enclosed in a ```json ... ``` block. Do not include any other text, explanations, or apologies outside of the code block.
 
 **User's Request:**
 {app_description}
 """
                     try:
                         response = model.generate_content(GENESIS_ENGINE_PROMPT)
-                        generated_code = response.text.strip()
+                        response_text = response.text.strip()
 
-                        # Extract code from markdown block
-                        if generated_code.startswith("```python"):
-                            generated_code = generated_code[len("```python"):].strip()
-                        if generated_code.endswith("```"):
-                            generated_code = generated_code[:-len("```")].strip()
+                        # Extract JSON from markdown block
+                        if response_text.startswith("```json"):
+                            response_text = response_text[len("```json"):].strip()
+                        if response_text.endswith("```"):
+                            response_text = response_text[:-len("```")].strip()
                         
-                        st.session_state.generated_app_code = generated_code
+                        # Parse the JSON response
+                        generated_files = json.loads(response_text)
+                        st.session_state.generated_app_files = generated_files
                         
                         safe_name = "".join(c for c in app_description if c.isalnum() or c == ' ').strip()
                         safe_name = safe_name.replace(' ', '_').lower()
                         if not safe_name:
                             safe_name = 'generated_app'
-                        st.session_state.generated_app_name = f"{safe_name[:40]}.py"
+                        st.session_state.generated_app_name = f"{safe_name[:40]}.zip"
 
                     except Exception as e:
                         st.error(f"Cosmic interference during generation: {e}")
-                        if 'generated_app_code' in st.session_state:
-                            del st.session_state.generated_app_code
+                        if 'generated_app_files' in st.session_state:
+                            del st.session_state.generated_app_files
             else:
                 st.warning("Please describe the app you want to build.")
 
-        # Display download button if code has been generated
-        if "generated_app_code" in st.session_state and st.session_state.generated_app_code:
-            st.success("✅ Your app script is ready!")
+        # Display download button if files have been generated
+        if "generated_app_files" in st.session_state and st.session_state.generated_app_files:
+            st.success("✅ Your app files are ready!")
             
+            # Create zip in memory
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+                for file_name, content in st.session_state.generated_app_files.items():
+                    zip_file.writestr(file_name, content)
+            zip_buffer.seek(0)
+
             def clear_genesis_engine_output():
-                st.session_state.pop("generated_app_code", None)
+                st.session_state.pop("generated_app_files", None)
                 st.session_state.pop("generated_app_name", None)
 
             st.download_button(
-                label="📥 Download Your App Script",
-                data=st.session_state.generated_app_code,
-                file_name=st.session_state.get("generated_app_name", "generated_app.py"),
-                mime="text/x-python",
+                label="📥 Download Your App (.zip)",
+                data=zip_buffer,
+                file_name=st.session_state.get("generated_app_name", "generated_app.zip"),
+                mime="application/zip",
                 use_container_width=True,
                 on_click=clear_genesis_engine_output
             )
