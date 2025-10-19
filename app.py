@@ -1356,6 +1356,24 @@ apply_cosmic_theme(fig, 'Supernova')
                 for file_name in message["files"]:
                     st.caption(f"📎 {file_name}")
     
+    # --- HOW-TO GUIDE ---
+    with st.expander("✨ How to Use Event Horizon", expanded=False):
+        st.markdown("""
+        <small>
+        **Welcome, Traveler! Here’s a quick guide to navigating the cosmos:**
+
+        *   **🚀 Start a Conversation:** Simply type your query in the "Ask the cosmos..." box and press SEND.
+        *   **📎 Attach Files:** Use the file uploader in the sidebar to provide context. You can upload documents (`.pdf`, `.txt`), data (`.csv`, `.xlsx`), or images.
+        *   **🎓 Change AI Persona:** Select a personality for the AI in the sidebar before starting a new chat. Try the **Cognitive Twin** to have an AI that adapts to your style!
+        *   **🪄 Use Data Tools:** After uploading a data file (`.csv`), a suite of powerful tools will appear in the sidebar:
+            *   **🛰️ Precognitive Analysis:** Get a one-shot report on trends in your data.
+            *   **🔬 Hypothesis Engine:** Upload a research paper (`.pdf`) alongside your data to generate novel scientific hypotheses.
+            *   **✨ Magic Visualizer:** Let the AI create an insightful chart from your data automatically.
+        *   **Genesis Engine:** Describe an app in the "Create an App" section in the sidebar, and the AI will write the code for you to download.
+        *   **🔊 Read Aloud:** Click the speaker icon (🔊) next to an AI response to hear it read aloud.
+        </small>
+        """, unsafe_allow_html=True)
+
     # Chat input
     st.markdown("---")
     prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
