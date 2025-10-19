@@ -755,6 +755,78 @@ with st.sidebar:
                 use_container_width=True
             )
 
+    # --- GENESIS ENGINE: On-Demand App Generation ---
+    st.markdown("---")
+    with st.expander("🚀 Genesis Engine: Create an App"):
+        st.markdown("<small>Describe a web tool or dashboard. The AI will generate a complete Streamlit app script for you to download.</small>", unsafe_allow_html=True)
+        app_description = st.text_area(
+            "Describe the app you want to build...",
+            placeholder="e.g., 'An app to track stocks with a price chart and news.'",
+            height=150,
+            key="genesis_input"
+        )
+
+        if st.button("✨ Generate App Script", key="genesis_button", use_container_width=True):
+            if app_description:
+                with st.spinner("🛠️ Architecting your application... Please wait."):
+                    GENESIS_ENGINE_PROMPT = f"""
+You are the Genesis Engine, an expert AI software architect specializing in creating self-contained, single-file Streamlit applications.
+Your task is to take a user's description of a web tool or dashboard and generate a complete, functional, and well-documented Python script for a Streamlit app.
+
+**Instructions:**
+1.  **Standalone Script:** The generated code MUST be a single, complete Python file (`.py`).
+2.  **Imports:** Include all necessary imports at the top of the script.
+3.  **Data Handling:** If the app requires data, use pandas DataFrames. For sample data, generate it directly within the script (e.g., `pd.DataFrame(...)`) or provide clear instructions on how the user should provide their data (e.g., a file uploader).
+4.  **Visualizations:** Use Plotly for any charts or graphs.
+5.  **Clarity and Comments:** The code should be clean, well-organized, and include comments to explain complex parts.
+6.  **Error Handling:** Include basic error handling where appropriate (e.g., for file uploads or API calls).
+7.  **Output Format:** Your response MUST contain ONLY the Python code for the Streamlit app, enclosed in a single ```python ... ``` block. Do not include any other text, explanations, or apologies outside of the code block.
+
+**User's Request:**
+{app_description}
+"""
+                    try:
+                        response = model.generate_content(GENESIS_ENGINE_PROMPT)
+                        generated_code = response.text.strip()
+
+                        # Extract code from markdown block
+                        if generated_code.startswith("```python"):
+                            generated_code = generated_code[len("```python"):].strip()
+                        if generated_code.endswith("```"):
+                            generated_code = generated_code[:-len("```")].strip()
+                        
+                        st.session_state.generated_app_code = generated_code
+                        
+                        safe_name = "".join(c for c in app_description if c.isalnum() or c == ' ').strip()
+                        safe_name = safe_name.replace(' ', '_').lower()
+                        if not safe_name:
+                            safe_name = 'generated_app'
+                        st.session_state.generated_app_name = f"{safe_name[:40]}.py"
+
+                    except Exception as e:
+                        st.error(f"Cosmic interference during generation: {e}")
+                        if 'generated_app_code' in st.session_state:
+                            del st.session_state.generated_app_code
+            else:
+                st.warning("Please describe the app you want to build.")
+
+        # Display download button if code has been generated
+        if "generated_app_code" in st.session_state and st.session_state.generated_app_code:
+            st.success("✅ Your app script is ready!")
+            
+            def clear_genesis_engine_output():
+                st.session_state.pop("generated_app_code", None)
+                st.session_state.pop("generated_app_name", None)
+
+            st.download_button(
+                label="📥 Download Your App Script",
+                data=st.session_state.generated_app_code,
+                file_name=st.session_state.get("generated_app_name", "generated_app.py"),
+                mime="text/x-python",
+                use_container_width=True,
+                on_click=clear_genesis_engine_output
+            )
+
     st.markdown("---")
     st.markdown("### COSMIC CHAT")
     
