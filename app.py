@@ -785,6 +785,10 @@ if "ethical_analysis_request" not in st.session_state:
     st.session_state.ethical_analysis_request = None
 if "symphony_to_play" not in st.session_state:
     st.session_state.symphony_to_play = None
+if "alchemist_code" not in st.session_state:
+    st.session_state.alchemist_code = None
+if "alchemist_explanation" not in st.session_state:
+    st.session_state.alchemist_explanation = None
 
 # Main content area
 st.markdown("<br>", unsafe_allow_html=True)
@@ -996,6 +1000,75 @@ Your task is to take a user's description of a web tool or dashboard and generat
                 use_container_width=True,
                 on_click=clear_genesis_engine_output
             )
+
+    st.markdown("---")
+    with st.expander("🧪 Code Alchemist: Live Refactoring"):
+        st.markdown("<small>Paste your code and have a conversation with the AI to refactor it in real-time.</small>", unsafe_allow_html=True)
+
+        # If no active session, show initial code input
+        if st.session_state.get('alchemist_code') is None:
+            initial_code = st.text_area(
+                "Paste your code here to begin...",
+                height=250,
+                key="alchemist_initial_input"
+            )
+            if st.button("Start Refactoring Session", key="alchemist_start", use_container_width=True):
+                if initial_code:
+                    st.session_state.alchemist_code = initial_code
+                    st.session_state.alchemist_explanation = "Your code is ready. What would you like to change?"
+                    st.rerun()
+                else:
+                    st.warning("Please paste some code to start.")
+        
+        # If there is an active session, show the interactive refactoring UI
+        else:
+            st.info(st.session_state.get('alchemist_explanation', ''))
+            
+            st.code(st.session_state.alchemist_code, language='python')
+
+            refactor_instruction = st.text_area(
+                "How should I refactor this?",
+                placeholder="e.g., 'Convert this to an asynchronous version.'",
+                key="alchemist_instruction"
+            )
+
+            if st.button("✨ Refactor", key="alchemist_refactor_button", use_container_width=True):
+                if refactor_instruction:
+                    with st.spinner("⚗️ The Alchemist is at work..."):
+                        CODE_ALCHEMIST_PROMPT = f"""You are the "Code Alchemist," a super-intelligent pair programmer that refactors code through conversation.
+Your task is to take a block of code and a user's instruction, then rewrite the code and explain your changes.
+
+**INSTRUCTIONS:**
+1.  **Analyze:** Review the "Current Code" and the "User's Instruction".
+2.  **Refactor:** Modify the code according to the instruction. The new code should be complete and runnable.
+3.  **Explain:** Write a concise explanation of what you changed and why.
+4.  **Output Format:** Your entire response MUST be a single, valid JSON object enclosed in a ```json ... ``` block. The JSON must have two keys: "new_code" (string) and "explanation" (string).
+
+**Current Code:**
+```python
+{st.session_state.alchemist_code}
+```
+
+**User's Instruction:**
+"{refactor_instruction}"
+
+Begin your work now."""
+                        try:
+                            response = model.generate_content(CODE_ALCHEMIST_PROMPT)
+                            response_text = response.text.strip().replace("```json", "").replace("```", "")
+                            alchemist_result = json.loads(response_text)
+                            st.session_state.alchemist_code = alchemist_result.get("new_code", st.session_state.alchemist_code)
+                            st.session_state.alchemist_explanation = alchemist_result.get("explanation", "An unknown transformation occurred.")
+                        except Exception as e:
+                            st.session_state.alchemist_explanation = f"A magical accident occurred: {e}"
+                    st.rerun()
+                else:
+                    st.warning("Please provide a refactoring instruction.")
+
+            if st.button("End Session", key="alchemist_end_button", use_container_width=True):
+                st.session_state.alchemist_code = None
+                st.session_state.alchemist_explanation = None
+                st.rerun()
 
     st.markdown("---")
     st.markdown("### COSMIC CHAT")
@@ -1489,16 +1562,22 @@ apply_cosmic_theme(fig, 'Supernova')
         st.markdown("""
         <small>
         **Welcome, Traveler! Here’s a quick guide to navigating the cosmos:**
-
+        
         *   **🚀 Start a Conversation:** Simply type your query in the "Ask the cosmos..." box and press SEND.
         *   **📎 Attach Files:** Use the file uploader in the sidebar to provide context. You can upload documents (`.pdf`, `.txt`), data (`.csv`, `.xlsx`), or images.
         *   **🎓 Change AI Persona:** Select a personality for the AI in the sidebar before starting a new chat. Try the **Cognitive Twin** to have an AI that adapts to your style!
-        *   **🪄 Use Data Tools:** After uploading a data file (`.csv`), a suite of powerful tools will appear in the sidebar:
+        
+        **Code & App Generation:**
+        *   **🚀 Genesis Engine:** Describe an app in its sidebar section, and the AI will write the code for you to download.
+        *   **🧪 Code Alchemist:** Paste code into its sidebar section and conversationally refactor it in real-time.
+
+        **Data Analysis Tools (appear after uploading data):**
             *   **🛰️ Precognitive Analysis:** Get a one-shot report on trends in your data.
             *   **🔬 Hypothesis Engine:** Upload a research paper (`.pdf`) alongside your data to generate novel scientific hypotheses.
             *   **✨ Magic Visualizer:** Let the AI create an insightful chart from your data automatically.
-        *   **🎼 Cosmic Symphony:** Listen to your data as a unique piece of music.
-        *   **Genesis Engine:** Describe an app in the "Create an App" section in the sidebar, and the AI will write the code for you to download.
+            *   **🎼 Cosmic Symphony:** Listen to your data as a unique piece of music.
+
+        **Response Tools:**
         *   **⚖️ Ethical Compass:** Click the scales icon (⚖️) next to an AI response to perform a bias and ethics analysis on it.
         *   **🔊 Read Aloud:** Click the speaker icon (🔊) next to an AI response to hear it read aloud.
         </small>
