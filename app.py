@@ -1190,6 +1190,7 @@ Summary of `df`:
     *   The script MUST use `numpy`, `scipy.io.wavfile`, `scipy.signal`, and `io.BytesIO`.
     *   The script must generate a final audio output and write it to an in-memory `io.BytesIO` buffer.
     *   **The final buffer object MUST be named `wav_buffer`.**
+    *   **Crucially, to avoid broadcasting errors, iterate through the data points. For each point, generate a short audio segment (e.g., 0.1 seconds) with a frequency mapped from the data value. Concatenate these segments to form the final audio track.**
 3.  **Generate a Description:** Write a brief, engaging description of the symphony you've designed. Explain which columns became which instruments.
 4.  **Output Format:** Your entire response MUST be a single, valid JSON object enclosed in a ```json ... ``` block. The JSON must have two keys: "description" (string) and "code" (string containing the Python script).
 
