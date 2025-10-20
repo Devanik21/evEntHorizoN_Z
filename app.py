@@ -671,53 +671,94 @@ def perform_precognitive_analysis(df, db):
     
     findings_explanations = []
     findings_visualizations = []
-
-    # --- Analysis Step 1: Check for significant trends ---
     numeric_cols = df.select_dtypes(include=[np.number]).columns
-    for col in numeric_cols:
-        data = df[col].dropna()
-        if len(data) < 10: # Need a minimum number of data points
-            continue
-            
-        x = np.arange(len(data))
-        slope, intercept, r_value, p_value, std_err = stats.linregress(x, data)
 
-        # Define "significant" as a strong correlation and statistically significant p-value
-        if r_value**2 > 0.7 and p_value < 0.05:
-            # --- Finding Discovered: Generate Explanation and Visualization ---
-            explanation_prompt = f"""
-As a Data Sentinel AI, you have discovered a significant trend in the user's data.
-The column is '{col}'. The linear regression resulted in an R-squared value of {r_value**2:.3f} and a p-value of {p_value:.4f}.
-Explain this finding to the user in a clear, concise, and insightful way. Start your response with "I've detected a significant trend in the '{col}' column...". Do not add any other preamble.
-"""
-            session_persona_name = get_session_persona(db, st.session_state.current_session_id)
-            cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
-            explanation = get_cosmic_response(explanation_prompt, cosmic_context)
-            findings_explanations.append(f"**Trend Detected in `{col}`:**\n{explanation}")
+    if len(numeric_cols) == 0:
+        return "🛰️ **Precognitive Analysis Report:** I've analyzed your data, but no numeric columns were found to generate insights from."
+
+    # --- Analysis Step 1: Correlation Matrix (if applicable) ---
+    if len(numeric_cols) > 1:
+        explanation = "A correlation matrix shows how variables are related. Values near 1 or -1 indicate a strong positive or negative relationship, respectively. Values near 0 suggest no linear relationship."
+        findings_explanations.append(f"**Correlation Analysis:**\n{explanation}")
+        
+        code_response = f"""```python
+# Correlation Matrix
+import plotly.graph_objects as go
+numeric_cols = df.select_dtypes(include=['number']).columns
+corr = df[numeric_cols].corr()
+fig = go.Figure(data=go.Heatmap(
+    z=corr.values, x=corr.columns, y=corr.columns, colorscale='Viridis',
+    text=corr.values, texttemplate='%{{text:.2f}}', colorbar=dict(title="Correlation")
+))
+fig.update_layout(title='Correlation Matrix')
+apply_cosmic_theme(fig, 'Quantum Foam')
+```"""
+        findings_visualizations.append(code_response)
+
+    # --- Analysis Step 2: Distribution of Most Variant Column ---
+    if len(numeric_cols) > 0:
+        # Use coefficient of variation to find an "interesting" column
+        cv = df[numeric_cols].std() / df[numeric_cols].mean()
+        if not cv.empty and cv.notna().any():
+            most_variant_col = cv.abs().idxmax()
+            
+            explanation = f"The distribution of '{most_variant_col}' (the column with the highest relative variance) shows the frequency of different values. This helps understand the data's central tendency, spread, and shape."
+            findings_explanations.append(f"**Distribution Analysis:**\n{explanation}")
 
             code_response = f"""```python
-# Trend analysis for column: {col}
-import plotly.graph_objects as go; import numpy as np; from scipy import stats
-col = '{col}'; data = df[col].dropna(); x = np.arange(len(data)); slope, intercept, r_value, p_value, std_err = stats.linregress(x, data)
-fig = go.Figure(); fig.add_trace(go.Scatter(x=x, y=data, mode='markers', name='Data')); fig.add_trace(go.Scatter(x=x, y=slope*x + intercept, mode='lines', name=f'Trend (R²={{r_value**2:.3f}})')); fig.update_layout(title=f'Sentinel Discovery: Trend in {{col}}'); apply_cosmic_theme(fig, 'Nebula Burst')
+# Distribution of {most_variant_col}
+import plotly.graph_objects as go
+col = '{most_variant_col}'
+fig = go.Figure()
+fig.add_trace(go.Histogram(x=df[col].dropna(), name='Distribution', marker=dict(color='#7C4DFF'), opacity=0.7))
+fig.update_layout(title=f'Distribution of {{col}}', xaxis_title=col, yaxis_title='Frequency')
+apply_cosmic_theme(fig, 'Supernova')
 ```"""
             findings_visualizations.append(code_response)
 
-    # --- (Future analysis steps like anomaly detection can be added here) ---
+    # --- Analysis Step 3: Trend Analysis ---
+    best_trend = {'col': None, 'r2': -1, 'p': 1}
+    for col in numeric_cols:
+        data = df[col].dropna()
+        if len(data) < 10: continue
+        
+        x = np.arange(len(data))
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x, data)
+        r_squared = r_value**2
+
+        if r_squared > best_trend['r2']:
+            best_trend = {'col': col, 'r2': r_squared, 'p': p_value}
+
+    if best_trend['col']:
+        col = best_trend['col']
+        r2 = best_trend['r2']
+        if r2 > 0.7 and best_trend['p'] < 0.05:
+            explanation = f"A **significant trend** was detected in the '{col}' column (R² = {r2:.3f}). This indicates a strong, predictable change in this variable over its sequence."
+        else:
+            explanation = f"The strongest potential trend was found in the '{col}' column (R² = {r2:.3f}). While not a strong statistical fit, this chart visualizes the general direction of the data."
+        findings_explanations.append(f"**Trend Analysis:**\n{explanation}")
+
+        code_response = f"""```python
+# Trend analysis for column: {col}
+import plotly.graph_objects as go; import numpy as np; from scipy import stats
+col = '{col}'; data = df[col].dropna(); x = np.arange(len(data)); slope, intercept, r_value, p_value, std_err = stats.linregress(x, data)
+fig = go.Figure(); fig.add_trace(go.Scatter(x=x, y=data, mode='markers', name='Data')); fig.add_trace(go.Scatter(x=x, y=slope*x + intercept, mode='lines', name=f'Trend (R²={{r_value**2:.3f}})')); fig.update_layout(title=f'Potential Trend in {{col}}'); apply_cosmic_theme(fig, 'Nebula Burst')
+```"""
+        findings_visualizations.append(code_response)
 
     # --- Consolidate Findings into a Single Message ---
     if not findings_explanations:
-        return "🛰️ **Precognitive Analysis Report:** I've analyzed your data and found no significant trends or anomalies at this time."
+        return "🛰️ **Precognitive Analysis Report:** I've analyzed your data, but couldn't generate specific insights. The data might be non-numeric or lack sufficient variation."
 
-    full_message = "🛰️ **Precognitive Analysis Report:** I've analyzed your data and discovered the following insights:\n\n"
+    full_message = "🛰️ **Precognitive Analysis Report:** I've performed a general analysis of your data and prepared the following insights:\n\n"
     
-    for i, explanation in enumerate(findings_explanations):
-        full_message += f"{i+1}. {explanation}\n\n"
+    for i, explanation_block in enumerate(findings_explanations):
+        title, body = explanation_block.split('\n', 1)
+        full_message += f"**Insight {i+1}: {title.replace('**', '')}**\n{body}\n\n"
         
     full_message += "\nHere are the corresponding visualizations:\n"
     
-    for viz_code in findings_visualizations:
-        full_message += f"{viz_code}\n"
+    full_message += "\n".join(findings_visualizations)
         
     return full_message
 
