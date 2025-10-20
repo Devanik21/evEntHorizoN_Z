@@ -779,6 +779,8 @@ if "dataframe_for_viz" not in st.session_state:
     st.session_state.dataframe_for_viz = None
 if "selected_persona" not in st.session_state:
     st.session_state.selected_persona = "Cosmic Intelligence"
+if "ethical_analysis_request" not in st.session_state:
+    st.session_state.ethical_analysis_request = None
 
 # Main content area
 st.markdown("<br>", unsafe_allow_html=True)
@@ -1331,8 +1333,8 @@ apply_cosmic_theme(fig, 'Supernova')
     for message in st.session_state.messages:
         avatar = "🌌" if message["role"] == "assistant" else "🧑‍🚀"
         with st.chat_message(message["role"], avatar=avatar):
-            if message["role"] == "assistant":
-                col1, col2 = st.columns([10, 1])
+            if message["role"] == "assistant" and "Ethical Compass Report" not in message["content"]:
+                col1, col2, col3 = st.columns([10, 1, 1])
                 with col1:
                     parts = message['content'].split('```')
                     for i, part in enumerate(parts):
@@ -1378,6 +1380,13 @@ apply_cosmic_theme(fig, 'Supernova')
                     if st.button("🔊", key=f"play_{message['timestamp']}", help="Read aloud"):
                         st.session_state.audio_to_play = message['content']
                         st.rerun()
+                with col3:
+                    if st.button("⚖️", key=f"ethics_{message['timestamp']}", help="Analyze for bias and ethics"):
+                        st.session_state.ethical_analysis_request = {
+                            'content': message['content'],
+                            'timestamp': message['timestamp']
+                        }
+                        st.rerun()
             else:
                 st.markdown(message["content"])
 
@@ -1411,6 +1420,7 @@ apply_cosmic_theme(fig, 'Supernova')
             *   **🔬 Hypothesis Engine:** Upload a research paper (`.pdf`) alongside your data to generate novel scientific hypotheses.
             *   **✨ Magic Visualizer:** Let the AI create an insightful chart from your data automatically.
         *   **Genesis Engine:** Describe an app in the "Create an App" section in the sidebar, and the AI will write the code for you to download.
+        *   **⚖️ Ethical Compass:** Click the scales icon (⚖️) next to an AI response to perform a bias and ethics analysis on it.
         *   **🔊 Read Aloud:** Click the speaker icon (🔊) next to an AI response to hear it read aloud.
         </small>
         """, unsafe_allow_html=True)
@@ -1497,6 +1507,45 @@ apply_cosmic_theme(fig, 'Supernova')
             st.session_state.messages.append(assistant_message)
         
         st.rerun()
+
+    # --- ETHICAL COMPASS ANALYSIS ---
+    if st.session_state.get('ethical_analysis_request'):
+        request = st.session_state.ethical_analysis_request
+        st.session_state.ethical_analysis_request = None # Clear the request
+
+        with st.spinner("⚖️ Applying Ethical Compass..."):
+            response_content = request['content']
+            
+            ETHICAL_COMPASS_PROMPT = f"""You are an AI Ethics and Bias Auditor. Your task is to perform a meta-analysis on a previous AI-generated response. Your goal is to identify potential issues and promote transparency and ethical accountability.
+
+**Instructions:**
+1.  **Analyze the Content:** Carefully review the provided "AI Response to Analyze".
+2.  **Check for Biases:** Look for potential biases, including but not limited to: gender bias (e.g., reinforcing stereotypes), cultural bias (e.g., presenting a single cultural perspective as universal), and cognitive bias (e.g., confirmation bias, oversimplification).
+3.  **Identify Logical Fallacies:** Check for any errors in reasoning or logical fallacies (e.g., ad hominem, straw man, false dichotomy).
+4.  **Spot Ethical Blind Spots:** Consider what the response might be missing. Are there unstated assumptions? Does it neglect potential negative consequences or ethical dilemmas related to the topic?
+5.  **Structure Your Report:** Present your findings in a clear, structured Markdown report.
+    - Start with a summary of your findings.
+    - Use headings for each category (e.g., "### Bias Analysis", "### Logical Fallacies", "### Ethical Considerations").
+    - If no issues are found in a category, state that clearly (e.g., "No significant biases were detected.").
+    - Be objective and constructive. The goal is transparency, not self-flagellation.
+
+**AI Response to Analyze:**
+---
+{response_content}
+---
+
+Begin your ethical analysis report now."""
+
+            analysis_report = get_cosmic_response(
+                prompt="Perform ethical analysis on the provided content.",
+                cosmic_context=ETHICAL_COMPASS_PROMPT.format(response_content=response_content)
+            )
+
+            report_message = f"⚖️ **Ethical Compass Report** (Analysis of response at {datetime.fromisoformat(request['timestamp']).strftime('%H:%M:%S')}):\n\n{analysis_report}"
+
+            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", report_message)
+            if assistant_message: st.session_state.messages.append(assistant_message)
+            st.rerun()
 
     # Audio player for TTS
     if st.session_state.audio_to_play:
