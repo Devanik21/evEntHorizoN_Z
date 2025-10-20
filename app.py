@@ -21,6 +21,8 @@ import plotly.express as px
 # --- ADVANCED FEATURE IMPORTS ---
 from gtts import gTTS
 from scipy import stats
+from scipy.io import wavfile
+from scipy import signal
 
 # --- CONSTANTS ---
 VISUALIZATION_INSTRUCTIONS = """
@@ -781,6 +783,8 @@ if "selected_persona" not in st.session_state:
     st.session_state.selected_persona = "Cosmic Intelligence"
 if "ethical_analysis_request" not in st.session_state:
     st.session_state.ethical_analysis_request = None
+if "symphony_to_play" not in st.session_state:
+    st.session_state.symphony_to_play = None
 
 # Main content area
 st.markdown("<br>", unsafe_allow_html=True)
@@ -1152,6 +1156,79 @@ Create a single visualization in ```python block. Final figure must be `fig`. Us
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
+        # New Tool: Cosmic Symphony
+        st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
+        if st.button("🎼 Compose Cosmic Symphony", use_container_width=True, help="Listen to the patterns in your data as music."):
+            if st.session_state.current_session_id is None:
+                persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
+                st.session_state.current_session_id = create_new_session(db, persona_name=persona_name)
+
+            data_file = data_files[0]
+            user_message = save_message(db, st.session_state.current_session_id, "user", f"🎼 Compose a Cosmic Symphony for `{data_file.name}`.")
+            if user_message: st.session_state.messages.append(user_message)
+
+            with st.spinner("🎼 Composing your data's symphony..."):
+                try:
+                    data_file.seek(0)
+                    df = pd.read_csv(data_file) if Path(data_file.name).suffix.lower() == '.csv' else pd.read_excel(data_file)
+                    st.session_state.dataframe_for_viz = df
+
+                    buffer = io.StringIO()
+                    df.info(buf=buffer)
+                    data_summary = f"Data Summary from '{data_file.name}':\nFirst 5 rows:\n{df.head().to_string()}\n\nData columns and types:\n{buffer.getvalue()}"
+
+                    COSMIC_SYMPHONY_PROMPT = f"""You are a "Cosmic Symphony" composer, an AI that translates data into a unique musical piece. Your task is to generate Python code that sonifies a dataset.
+
+**CONTEXT:**
+A dataset is available in a pandas DataFrame named `df`.
+Summary of `df`:
+{data_summary}
+
+**INSTRUCTIONS:**
+1.  **Analyze and Design:** Review the data summary to choose 1-3 numeric columns for sonification. Design a symphony where each column is an "instrument" (e.g., different waveform or octave), values map to pitch, and anomalies create distinct sounds.
+2.  **Generate Python Code:** Write a Python script to perform the sonification.
+    *   The script MUST use `numpy`, `scipy.io.wavfile`, `scipy.signal`, and `io.BytesIO`.
+    *   The script must generate a final audio output and write it to an in-memory `io.BytesIO` buffer.
+    *   **The final buffer object MUST be named `wav_buffer`.**
+3.  **Generate a Description:** Write a brief, engaging description of the symphony you've designed. Explain which columns became which instruments.
+4.  **Output Format:** Your entire response MUST be a single, valid JSON object enclosed in a ```json ... ``` block. The JSON must have two keys: "description" (string) and "code" (string containing the Python script).
+
+**Example JSON Output:**
+```json
+{{
+  "description": "This is a symphony of your sales data. The 'Sales' column is represented by a flute-like melody (sine wave), while 'Customer_Count' forms a bassline an octave lower. Listen for sharp, dissonant chords which indicate anomalous sales spikes.",
+  "code": "import numpy as np\\nfrom scipy.io import wavfile\\nfrom scipy import signal\\nimport io\\n\\n# ... [rest of the sonification code] ...\\n\\nwav_buffer = io.BytesIO()\\nwavfile.write(wav_buffer, 44100, audio_data.astype(np.int16))\\nwav_buffer.seek(0)"
+}}
+```
+Begin your composition now."""
+                    
+                    response = model.generate_content(COSMIC_SYMPHONY_PROMPT)
+                    response_text = response.text.strip().replace("```json", "").replace("```", "")
+                    
+                    symphony_data = json.loads(response_text)
+                    description = symphony_data.get("description", "Your Cosmic Symphony is ready.")
+                    code_to_run = symphony_data.get("code", "")
+
+                    if code_to_run:
+                        local_scope = {
+                            'df': df, 'np': np, 'pd': pd, 'stats': stats,
+                            'io': io, 'wavfile': wavfile, 'signal': signal
+                        }
+                        exec(code_to_run, local_scope)
+                        
+                        if 'wav_buffer' in local_scope:
+                            st.session_state.symphony_to_play = local_scope['wav_buffer']
+                            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", description)
+                            if assistant_message: st.session_state.messages.append(assistant_message)
+                        else: raise ValueError("The generated code did not produce a 'wav_buffer'.")
+                    else: raise ValueError("The AI did not generate any code for the symphony.")
+                except Exception as e:
+                    error_message = f"🎼 The symphony was interrupted by cosmic noise: {e}"
+                    assistant_message = save_message(db, st.session_state.current_session_id, "assistant", error_message)
+                    if assistant_message: st.session_state.messages.append(assistant_message)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
         # Tool 2: Statistical Analyzer
         st.markdown('<div class="data-tool-button">', unsafe_allow_html=True)
         if st.button("📊 Statistical Analyzer", use_container_width=True, help="Comprehensive statistical analysis"):
@@ -1419,6 +1496,7 @@ apply_cosmic_theme(fig, 'Supernova')
             *   **🛰️ Precognitive Analysis:** Get a one-shot report on trends in your data.
             *   **🔬 Hypothesis Engine:** Upload a research paper (`.pdf`) alongside your data to generate novel scientific hypotheses.
             *   **✨ Magic Visualizer:** Let the AI create an insightful chart from your data automatically.
+        *   **🎼 Cosmic Symphony:** Listen to your data as a unique piece of music.
         *   **Genesis Engine:** Describe an app in the "Create an App" section in the sidebar, and the AI will write the code for you to download.
         *   **⚖️ Ethical Compass:** Click the scales icon (⚖️) next to an AI response to perform a bias and ethics analysis on it.
         *   **🔊 Read Aloud:** Click the speaker icon (🔊) next to an AI response to hear it read aloud.
@@ -1507,6 +1585,14 @@ apply_cosmic_theme(fig, 'Supernova')
             st.session_state.messages.append(assistant_message)
         
         st.rerun()
+
+    # --- COSMIC SYMPHONY PLAYER ---
+    if st.session_state.get('symphony_to_play'):
+        symphony_buffer = st.session_state.symphony_to_play
+        st.session_state.symphony_to_play = None # Clear the request to prevent re-playing
+
+        # Embed the audio player at the bottom of the screen
+        st.audio(symphony_buffer, format='audio/wav')
 
     # --- ETHICAL COMPASS ANALYSIS ---
     if st.session_state.get('ethical_analysis_request'):
