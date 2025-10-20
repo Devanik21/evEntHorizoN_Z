@@ -1018,7 +1018,7 @@ Your task is to cross-reference a research paper with a dataset to generate nove
     *   **Hypothesis:** State the hypothesis clearly.
     *   **Rationale:** Explain why this hypothesis is relevant, based on the paper.
     *   **Experimental Design:** Outline a plan to test this hypothesis using the dataset.
-    *   **Statistical Test Code:** Provide a Python code block for an initial statistical test. The code MUST use `plotly` for any visualizations, assume data is in a DataFrame `df`, and use `apply_cosmic_theme(fig, 'Theme Name')`.
+    *   **Statistical Test Code:** Provide a Python code block for an initial statistical test. The code MUST use `plotly` for any visualizations, assume data is in a DataFrame `df`, and use `apply_cosmic_theme(fig, 'Theme Name')`. **Crucially, before plotting, ensure all data columns passed to a plotting function have the same length by handling missing values (e.g., by dropping rows with NaNs for the columns being plotted).**
 
 ---
 **Research Paper Context (`{text_file.name}`):**
