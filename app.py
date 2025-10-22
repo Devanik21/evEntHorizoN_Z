@@ -275,6 +275,55 @@ def distribution_analysis(df):
         return fig
     return None
 
+# --- PASSWORD PROTECTION ---
+def check_password():
+    """Shows a login form and stops the app if the password is not correct."""
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+    if "login_attempts" not in st.session_state:
+        st.session_state.login_attempts = 0
+
+    if st.session_state.logged_in:
+        return
+
+    try:
+        correct_password = st.secrets["APP_PASSWORD"]
+    except (KeyError, FileNotFoundError):
+        st.error("⚠️ `APP_PASSWORD` not set in Streamlit secrets.")
+        st.info("To run this app, create a file at `.streamlit/secrets.toml` and add `APP_PASSWORD = 'your_password'`.")
+        st.stop()
+
+    if st.session_state.login_attempts >= 3:
+        st.error("🔒 Too many incorrect attempts. The application is locked.")
+        st.stop()
+
+    _, col, _ = st.columns([1, 1.5, 1])
+    with col:
+        with st.form("login_form"):
+            st.markdown("<h2 style='text-align: center;'>🔑 Authentication</h2>", unsafe_allow_html=True)
+            password = st.text_input(
+                "Enter Password",
+                type="password",
+                label_visibility="collapsed",
+                placeholder="Password"
+            )
+            submitted = st.form_submit_button("Unlock", use_container_width=True)
+
+            if submitted:
+                if password == correct_password:
+                    st.session_state.logged_in = True
+                    st.session_state.login_attempts = 0
+                    st.rerun()
+                else:
+                    st.session_state.login_attempts += 1
+                    attempts_left = 3 - st.session_state.login_attempts
+                    if attempts_left > 0:
+                        st.error(f"Incorrect password. {attempts_left} attempt(s) left.")
+                    else:
+                        st.error("Incorrect password. The application is now locked.")
+                        st.rerun()
+    st.stop()
+
 # --- FUNCTIONS ---
 def get_base64_of_bin_file(bin_file):
     """Encodes a binary file to a base64 string."""
@@ -766,6 +815,9 @@ fig = go.Figure(); fig.add_trace(go.Scatter(x=x, y=data, mode='markers', name='D
 
 # --- APP LAYOUT ---
 set_page_background_and_style('black_hole (1).png')
+
+# Run password check
+check_password()
 
 # Initialize database
 db = init_database()
