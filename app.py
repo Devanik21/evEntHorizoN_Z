@@ -316,10 +316,8 @@ def check_password():
                     st.rerun()
                 else:
                     st.session_state.login_attempts += 1
-                    attempts_left = 3 - st.session_state.login_attempts
-                    if attempts_left > 0:
-                        st.error(f"Incorrect password. {attempts_left} attempt(s) left.")
-                    else:
+                    # Only show error message if the app is now locked
+                    if st.session_state.login_attempts >= 3:
                         st.error("Incorrect password. The application is now locked.")
                         st.rerun()
     st.stop()
