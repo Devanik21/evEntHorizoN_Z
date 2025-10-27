@@ -710,13 +710,17 @@ def generate_art_from_text(prompt, negative_prompt=None):
     try:
         image_model = genai.GenerativeModel("gemini-2.0-flash-exp-image-generation")
         
-        # For some models, combining prompts into a single string can be more reliable.
-        # This also includes the negative prompt in a way the model can process.
-        final_prompt = prompt
-        if negative_prompt:
-            final_prompt += f"\n\nNegative prompt: {negative_prompt}"
+        # Enhance the prompt to be more descriptive and explicit about the desired output.
+        # This helps guide the experimental model into image generation mode and avoid
+        # it defaulting to a text-based chat or analysis mode.
+        enhanced_prompt = f"Generate a high-quality, photographic image of: {prompt}"
 
-        response = image_model.generate_content(final_prompt)
+        # Combine with negative prompt if provided, passing them as a list.
+        final_prompt_parts = [enhanced_prompt]
+        if negative_prompt:
+            final_prompt_parts.append(f"Negative prompt: {negative_prompt}")
+
+        response = image_model.generate_content(final_prompt_parts)
         
         image_bytes = None
         description = "No description was generated."
