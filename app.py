@@ -705,6 +705,36 @@ def get_follow_up_suggestions(prompt, response):
     except Exception as e:
         return []
 
+def generate_art_from_text(prompt):
+    """Generate art and a description using the Gemini image generation model."""
+    try:
+        image_model = genai.GenerativeModel("gemini-2.0-flash-exp-image-generation")
+        
+        # The model is specialized; it will interpret the prompt for image generation
+        # and return multiple content types (image and text) in its response.
+        response = image_model.generate_content(prompt)
+        
+        image_bytes = None
+        description = "No description was generated."
+
+        if response.candidates and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'inline_data') and part.inline_data:
+                    image_bytes = part.inline_data.data
+                elif hasattr(part, 'text') and part.text:
+                    description = part.text
+        
+        if image_bytes:
+            return image_bytes, description
+        else:
+            # Check for a block reason if no image is returned
+            if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
+                return None, f"Image generation blocked. Reason: {response.prompt_feedback.block_reason.name}"
+            return None, "Sorry, I couldn't generate an image. The model may not have returned image data."
+            
+    except Exception as e:
+        return None, f"🎨 Cosmic interference during image generation: {str(e)}"
+
 def format_chat_as_markdown(messages, session_name):
     """Formats a list of chat messages into a Markdown string."""
     md_string = f"# Chat History: {session_name}\n\n"
@@ -1537,46 +1567,53 @@ apply_cosmic_theme(fig, 'Supernova')
             if message["role"] == "assistant" and "Ethical Compass Report" not in message["content"]:
                 col1, col2, col3 = st.columns([10, 1, 1])
                 with col1:
-                    parts = message['content'].split('```')
-                    for i, part in enumerate(parts):
-                        if not part.strip():
-                            continue
-                        
-                        if i % 2 == 1:
-                            lines = part.split('\n', 1)
-                            lang = lines[0].strip()
-                            code = lines[1] if len(lines) > 1 else ""
+                    content = message['content']
+                    if content.startswith("[IMAGE:") and "]" in content:
+                        try:
+                            header, description = content.split("]", 1)
+                            image_base64 = header.replace("[IMAGE:", "")
+                            image_bytes = base64.b64decode(image_base64)
+                            st.image(image_bytes, caption="Generated Artwork", use_column_width=True)
+                            if description:
+                                st.markdown(description)
+                        except Exception as e:
+                            st.error(f"Error displaying generated image: {e}")
+                            st.markdown(content) # Fallback to show raw content
+                    else:
+                        parts = message['content'].split('```')
+                        for i, part in enumerate(parts):
+                            if not part.strip():
+                                continue
+                            
+                            if i % 2 == 1:
+                                lines = part.split('\n', 1)
+                                lang = lines[0].strip()
+                                code = lines[1] if len(lines) > 1 else ""
 
-                            if lang == 'python':
-                                try:
-                                    local_scope = {
-                                        'go': go,
-                                        'px': px,
-                                        'pd': pd,
-                                        'np': np,
-                                        'stats': stats,
-                                        'apply_cosmic_theme': apply_cosmic_theme
-                                    }
-                                    if 'dataframe_for_viz' in st.session_state and st.session_state.dataframe_for_viz is not None:
-                                        local_scope['df'] = st.session_state.dataframe_for_viz
+                                if lang == 'python':
+                                    try:
+                                        local_scope = {
+                                            'go': go, 'px': px, 'pd': pd, 'np': np, 'stats': stats,
+                                            'apply_cosmic_theme': apply_cosmic_theme
+                                        }
+                                        if 'dataframe_for_viz' in st.session_state and st.session_state.dataframe_for_viz is not None:
+                                            local_scope['df'] = st.session_state.dataframe_for_viz
 
-                                    exec(code, local_scope)
-                                    
-                                    if 'fig' in local_scope:
-                                        # Use unique key based on message timestamp and index
-                                        chart_key = f"chart_{message['timestamp']}_{i}"
-                                        st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None, key=chart_key)
-                                        # Don't clear dataframe - keep it for subsequent charts
-                                    else:
+                                        exec(code, local_scope)
+                                        
+                                        if 'fig' in local_scope:
+                                            chart_key = f"chart_{message['timestamp']}_{i}"
+                                            st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None, key=chart_key)
+                                        else:
+                                            st.code(code, language='python')
+
+                                    except Exception as e:
+                                        st.error(f"🔮 Cosmic Interference: {e}")
                                         st.code(code, language='python')
-
-                                except Exception as e:
-                                    st.error(f"🔮 Cosmic Interference: {e}")
-                                    st.code(code, language='python')
+                                else:
+                                    st.code(code, language=lang if lang else "plaintext")
                             else:
-                                st.code(code, language=lang if lang else "plaintext")
-                        else:
-                            st.markdown(part)
+                                st.markdown(part)
                 with col2:
                     if st.button("🔊", key=f"play_{message['timestamp']}", help="Read aloud"):
                         st.session_state.audio_to_play = message['content']
@@ -1680,39 +1717,38 @@ apply_cosmic_theme(fig, 'Supernova')
         if user_message:
             st.session_state.messages.append(user_message)
         
-        session_persona_name = get_session_persona(db, st.session_state.current_session_id)
-        
-        # --- Persona Logic: Use Cognitive Twin or a pre-defined persona ---
-        if session_persona_name == "Cognitive Twin":
-            with st.spinner("🧠 Cognitive Twin is evolving..."):
-                # Gather all user messages for this session to build the persona
-                all_session_messages = load_session_messages(db, st.session_state.current_session_id)
-                user_messages_text = "\n".join([msg['content'] for msg in all_session_messages if msg['role'] == 'user'])
-                
-                # Add the current prompt to the text to be analyzed for the most up-to-date persona
-                user_messages_text += "\n" + prompt
+        IMAGE_KEYWORDS = ["draw", "create", "image", "paint", "generate art", "make a picture"]
+        is_image_request = any(keyword in prompt.lower() for keyword in IMAGE_KEYWORDS)
 
-                # Generate the dynamic persona for this specific interaction
-                cosmic_context = generate_cognitive_twin_persona(user_messages_text)
-                
-                # Save the latest evolved persona description to the session for future reference
-                sessions_table = db.table('sessions')
-                sessions_table.update({'dynamic_persona_description': cosmic_context}, doc_ids=[st.session_state.current_session_id])
+        if is_image_request:
+            with st.spinner("🎨 Conjuring a cosmic masterpiece..."):
+                image_bytes, description = generate_art_from_text(prompt)
+                if image_bytes:
+                    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                    content_to_save = f"[IMAGE:{image_base64}]{description}"
+                    assistant_message = save_message(db, st.session_state.current_session_id, "assistant", content_to_save)
+                else:
+                    assistant_message = save_message(db, st.session_state.current_session_id, "assistant", description) # description contains error
+                if assistant_message:
+                    st.session_state.messages.append(assistant_message)
         else:
-            cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
-            
-        response = get_cosmic_response(prompt, cosmic_context, parts=gemini_parts)
-        suggestions = get_follow_up_suggestions(prompt, response)
-        
-        assistant_message = save_message(
-            db,
-            st.session_state.current_session_id,
-            "assistant",
-            response,
-            suggestions=suggestions
-        )
-        if assistant_message:
-            st.session_state.messages.append(assistant_message)
+            session_persona_name = get_session_persona(db, st.session_state.current_session_id)
+            if session_persona_name == "Cognitive Twin":
+                with st.spinner("🧠 Cognitive Twin is evolving..."):
+                    all_session_messages = load_session_messages(db, st.session_state.current_session_id)
+                    user_messages_text = "\n".join([msg['content'] for msg in all_session_messages if msg['role'] == 'user'])
+                    user_messages_text += "\n" + prompt
+                    cosmic_context = generate_cognitive_twin_persona(user_messages_text)
+                    sessions_table = db.table('sessions')
+                    sessions_table.update({'dynamic_persona_description': cosmic_context}, doc_ids=[st.session_state.current_session_id])
+            else:
+                cosmic_context = PERSONAS.get(session_persona_name, PERSONAS["Cosmic Intelligence"])
+                
+            response = get_cosmic_response(prompt, cosmic_context, parts=gemini_parts)
+            suggestions = get_follow_up_suggestions(prompt, response)
+            assistant_message = save_message(db, st.session_state.current_session_id, "assistant", response, suggestions=suggestions)
+            if assistant_message:
+                st.session_state.messages.append(assistant_message)
         
         st.rerun()
 
