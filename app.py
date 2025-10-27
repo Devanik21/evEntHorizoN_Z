@@ -705,15 +705,19 @@ def get_follow_up_suggestions(prompt, response):
     except Exception as e:
         return []
 
-def generate_art_from_text(prompt):
+def generate_art_from_text(prompt, negative_prompt=None):
     """Generate art and a description using the Gemini image generation model."""
     try:
         image_model = genai.GenerativeModel("gemini-2.0-flash-exp-image-generation")
         
-        # The model is specialized; it will interpret the prompt for image generation
-        # and return multiple content types. We must explicitly ask for both modalities.
-        # The specialized model should return multiple parts by default.
-        response = image_model.generate_content(prompt)
+        # Construct the contents list, including the negative prompt if provided.
+        # This structure is important for the image model.
+        contents = [prompt]
+        if negative_prompt:
+            contents.append(f"Negative prompt: {negative_prompt}")
+
+        # The specialized model should return multiple parts by default when passed a list.
+        response = image_model.generate_content(contents)
         
         image_bytes = None
         description = "No description was generated."
@@ -1681,13 +1685,21 @@ apply_cosmic_theme(fig, 'Supernova')
     st.markdown("---")
     if st.session_state.get('canvas_mode', False):
         st.info("🎨 **Canvas Mode is active.** All prompts will generate images.")
-        prompt = st.text_area("🎨 Describe your masterpiece...", key="chat_input", height=100)
+        prompt = st.text_area("🎨 Describe your masterpiece...", key="chat_input", height=100, placeholder="A majestic dragon soaring through a crystal cave filled with glowing gems...")
+        negative_prompt = st.text_area(
+            "🚫 Negative Prompt (Optional)",
+            height=80,
+            placeholder="e.g., blurry, text, watermark, extra limbs, bad anatomy...",
+            help="Tell the AI what to AVOID in the image. Separate concepts with commas.",
+            key="negative_prompt_input"
+        )
         send_button_label = "CREATE"
     else:
         prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
+        negative_prompt = None
         send_button_label = "SEND"
 
-    send_button = st.button(send_button_label, use_container_width=True)
+    send_button = st.button(send_button_label, use_container_width=True, type="primary")
     
     if send_button and prompt:
         if st.session_state.current_session_id is None:
@@ -1733,7 +1745,7 @@ apply_cosmic_theme(fig, 'Supernova')
         
         if st.session_state.get('canvas_mode', False):
             with st.spinner("🎨 Conjuring a cosmic masterpiece..."):
-                image_bytes, description = generate_art_from_text(prompt)
+                image_bytes, description = generate_art_from_text(prompt, negative_prompt)
                 if image_bytes:
                     image_base64 = base64.b64encode(image_bytes).decode('utf-8')
                     content_to_save = f"[IMAGE:{image_base64}]{description}"
