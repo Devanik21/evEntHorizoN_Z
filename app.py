@@ -713,7 +713,7 @@ def generate_art_from_text(prompt, negative_prompt=None):
         # Enhance the prompt to be more descriptive and explicit about the desired output.
         # This helps guide the experimental model into image generation mode and avoid
         # it defaulting to a text-based chat or analysis mode.
-        enhanced_prompt = f"Generate a high-quality, photographic image of: {prompt}"
+        enhanced_prompt = f"A cinematic, high-detail, photorealistic masterpiece, 8k resolution: {prompt}"
 
         # Combine with negative prompt if provided, passing them as a list.
         final_prompt_parts = [enhanced_prompt]
