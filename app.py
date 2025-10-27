@@ -710,14 +710,13 @@ def generate_art_from_text(prompt, negative_prompt=None):
     try:
         image_model = genai.GenerativeModel("gemini-2.0-flash-exp-image-generation")
         
-        # Construct the contents list, including the negative prompt if provided.
-        # This structure is important for the image model.
-        contents = [prompt]
+        # For some models, combining prompts into a single string can be more reliable.
+        # This also includes the negative prompt in a way the model can process.
+        final_prompt = prompt
         if negative_prompt:
-            contents.append(f"Negative prompt: {negative_prompt}")
+            final_prompt += f"\n\nNegative prompt: {negative_prompt}"
 
-        # The specialized model should return multiple parts by default when passed a list.
-        response = image_model.generate_content(contents)
+        response = image_model.generate_content(final_prompt)
         
         image_bytes = None
         description = "No description was generated."
@@ -735,7 +734,11 @@ def generate_art_from_text(prompt, negative_prompt=None):
             # Check for a block reason if no image is returned
             if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
                 return None, f"Image generation blocked. Reason: {response.prompt_feedback.block_reason.name}"
-            return None, "Sorry, I couldn't generate an image. The model may not have returned image data."
+            
+            # If the model returned only text, it might be an error or explanation.
+            if description and description != "No description was generated.":
+                return None, f"The model returned text instead of an image: \"{description}\""
+            return None, "Sorry, I couldn't generate an image. The model may not have returned any data."
             
     except Exception as e:
         return None, f"🎨 Cosmic interference during image generation: {str(e)}"
