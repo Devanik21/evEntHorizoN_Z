@@ -711,8 +711,13 @@ def generate_art_from_text(prompt):
         image_model = genai.GenerativeModel("gemini-2.0-flash-exp-image-generation")
         
         # The model is specialized; it will interpret the prompt for image generation
-        # and return multiple content types (image and text) in its response.
-        response = image_model.generate_content(prompt)
+        # and return multiple content types. We must explicitly ask for both modalities.
+        response = image_model.generate_content(
+            [prompt],
+            generation_config=genai.types.GenerationConfig(
+                response_modalities=["image", "text"]
+            )
+        )
         
         image_bytes = None
         description = "No description was generated."
