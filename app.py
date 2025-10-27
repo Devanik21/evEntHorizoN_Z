@@ -712,12 +712,8 @@ def generate_art_from_text(prompt):
         
         # The model is specialized; it will interpret the prompt for image generation
         # and return multiple content types. We must explicitly ask for both modalities.
-        response = image_model.generate_content(
-            [prompt],
-            generation_config=genai.types.GenerationConfig(
-                response_modalities=["image", "text"]
-            )
-        )
+        # The specialized model should return multiple parts by default.
+        response = image_model.generate_content(prompt)
         
         image_bytes = None
         description = "No description was generated."
