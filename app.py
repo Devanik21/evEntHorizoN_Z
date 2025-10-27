@@ -870,6 +870,8 @@ if "alchemist_code" not in st.session_state:
     st.session_state.alchemist_code = None
 if "alchemist_explanation" not in st.session_state:
     st.session_state.alchemist_explanation = None
+if "canvas_mode" not in st.session_state:
+    st.session_state.canvas_mode = False
 
 # Main content area
 st.markdown("<br>", unsafe_allow_html=True)
@@ -1566,7 +1568,7 @@ apply_cosmic_theme(fig, 'Supernova')
         avatar = "🌌" if message["role"] == "assistant" else "🧑‍🚀"
         with st.chat_message(message["role"], avatar=avatar):
             if message["role"] == "assistant" and "Ethical Compass Report" not in message["content"]:
-                col1, col2, col3 = st.columns([10, 1, 1])
+                col1, col2, col3, col4 = st.columns([10, 1, 1, 1])
                 with col1:
                     content = message['content']
                     if content.startswith("[IMAGE:") and "]" in content:
@@ -1626,6 +1628,10 @@ apply_cosmic_theme(fig, 'Supernova')
                             'timestamp': message['timestamp']
                         }
                         st.rerun()
+                with col4:
+                    if st.button("🎨", key=f"canvas_{message['timestamp']}", help="Toggle Canvas Mode"):
+                        st.session_state.canvas_mode = not st.session_state.get('canvas_mode', False)
+                        st.rerun()
             else:
                 st.markdown(message["content"])
 
@@ -1673,8 +1679,15 @@ apply_cosmic_theme(fig, 'Supernova')
 
     # Chat input
     st.markdown("---")
-    prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
-    send_button = st.button("SEND", use_container_width=True)
+    if st.session_state.get('canvas_mode', False):
+        st.info("🎨 **Canvas Mode is active.** All prompts will generate images.")
+        prompt = st.text_area("🎨 Describe your masterpiece...", key="chat_input", height=100)
+        send_button_label = "CREATE"
+    else:
+        prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
+        send_button_label = "SEND"
+
+    send_button = st.button(send_button_label, use_container_width=True)
     
     if send_button and prompt:
         if st.session_state.current_session_id is None:
@@ -1718,10 +1731,7 @@ apply_cosmic_theme(fig, 'Supernova')
         if user_message:
             st.session_state.messages.append(user_message)
         
-        IMAGE_KEYWORDS = ["draw", "create", "image", "paint", "generate art", "make a picture"]
-        is_image_request = any(keyword in prompt.lower() for keyword in IMAGE_KEYWORDS)
-
-        if is_image_request:
+        if st.session_state.get('canvas_mode', False):
             with st.spinner("🎨 Conjuring a cosmic masterpiece..."):
                 image_bytes, description = generate_art_from_text(prompt)
                 if image_bytes:
