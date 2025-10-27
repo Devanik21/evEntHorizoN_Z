@@ -708,25 +708,33 @@ def get_follow_up_suggestions(prompt, response):
 def generate_art_from_text(prompt, negative_prompt=None):
     """Generate art and a description using the Gemini image generation model."""
     try:
+        # This model name is correct for image generation.
         image_model = genai.GenerativeModel("gemini-2.0-flash-exp-image-generation")
         
-        # Enhance the prompt to be more descriptive and explicit about the desired output.
-        # This helps guide the experimental model into image generation mode and avoid
-        # it defaulting to a text-based chat or analysis mode.
         enhanced_prompt = f"A cinematic, high-detail, photorealistic masterpiece, 8k resolution: {prompt}"
 
-        # Combine with negative prompt if provided, passing them as a list.
         final_prompt_parts = [enhanced_prompt]
         if negative_prompt:
             final_prompt_parts.append(f"Negative prompt: {negative_prompt}")
 
-        response = image_model.generate_content(final_prompt_parts)
+        # --- THIS IS THE KEY FIX ---
+        # The working example `dream_canvas.py` uses the parameter name `config`.
+        # While current documentation may suggest `generation_config`, the observed
+        # behavior indicates that for your environment, `config` is the correct
+        # parameter that is being recognized by the API client.
+        response = image_model.generate_content(
+            final_prompt_parts,
+            config=genai.types.GenerationConfig(
+                response_modalities=["image", "text"]
+            )
+        )
         
         image_bytes = None
         description = "No description was generated."
 
         if response.candidates and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
+                # The model can return text and image in any order.
                 if hasattr(part, 'inline_data') and part.inline_data:
                     image_bytes = part.inline_data.data
                 elif hasattr(part, 'text') and part.text:
@@ -735,11 +743,9 @@ def generate_art_from_text(prompt, negative_prompt=None):
         if image_bytes:
             return image_bytes, description
         else:
-            # Check for a block reason if no image is returned
             if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
                 return None, f"Image generation blocked. Reason: {response.prompt_feedback.block_reason.name}"
             
-            # If the model returned only text, it might be an error or explanation.
             if description and description != "No description was generated.":
                 return None, f"The model returned text instead of an image: \"{description}\""
             return None, "Sorry, I couldn't generate an image. The model may not have returned any data."
@@ -919,6 +925,16 @@ with st.sidebar:
     if st.session_state.current_session_id:
         active_persona = get_session_persona(db, st.session_state.current_session_id)
         st.caption(f"Active Persona: **{active_persona}**")
+
+    # --- Canvas Mode Toggle ---
+    st.markdown("---")
+    st.markdown("### 🎨 CANVAS MODE")
+    st.session_state.canvas_mode = st.toggle(
+        "Activate Image Generation",
+        value=st.session_state.get('canvas_mode', False),
+        help="When active, all prompts will be sent to the image generation model. When inactive, it's a standard text chat."
+    )
+    st.markdown("---")
 
     st.markdown("### 🌌 CHAT SESSIONS")
     
@@ -1578,23 +1594,51 @@ apply_cosmic_theme(fig, 'Supernova')
     for message in st.session_state.messages:
         avatar = "🌌" if message["role"] == "assistant" else "🧑‍🚀"
         with st.chat_message(message["role"], avatar=avatar):
-            if message["role"] == "assistant" and "Ethical Compass Report" not in message["content"]:
-                col1, col2, col3, col4 = st.columns([10, 1, 1, 1])
+            content = message.get('content', '')
+            is_image_message = content.startswith("[IMAGE:") and "]" in content
+
+            if message["role"] == "assistant" and "Ethical Compass Report" not in content:
+                col1, col2, col3 = st.columns([12, 1, 1])
                 with col1:
-                    content = message['content']
-                    if content.startswith("[IMAGE:") and "]" in content:
+                    if is_image_message:
                         try:
                             header, description = content.split("]", 1)
                             image_base64 = header.replace("[IMAGE:", "")
                             image_bytes = base64.b64decode(image_base64)
-                            st.image(image_bytes, caption="Generated Artwork", use_column_width=True)
+                            img = Image.open(io.BytesIO(image_bytes))
+
+                            st.image(img, caption="✨ Generated Masterpiece", use_container_width=True)
+
                             if description:
-                                st.markdown(description)
+                                st.info(description)
+                                try:
+                                    audio_buffer = io.BytesIO()
+                                    tts = gTTS(text=description, lang='en', slow=False)
+                                    tts.write_to_fp(audio_buffer)
+                                    audio_buffer.seek(0)
+                                    st.audio(audio_buffer, format='audio/mp3', start_time=0)
+                                except Exception as e:
+                                    st.warning(f"Could not generate audio for the description: {e}")
+
+                            st.markdown("##### 💾 Export")
+                            dl_col1, dl_col2 = st.columns(2)
+                            with dl_col1:
+                                st.download_button("📥 PNG", image_bytes, f"cosmic_art_{int(datetime.now().timestamp())}.png", "image/png", key=f"png_{message['timestamp']}", use_container_width=True)
+                            with dl_col2:
+                                jpg_buffer = io.BytesIO()
+                                if img.mode == 'RGBA':
+                                    jpg_img = Image.new('RGB', img.size, (255, 255, 255))
+                                    jpg_img.paste(img, mask=img.split()[-1])
+                                else:
+                                    jpg_img = img.convert('RGB')
+                                jpg_img.save(jpg_buffer, format="JPEG", quality=95)
+                                st.download_button("📥 JPG", jpg_buffer.getvalue(), f"cosmic_art_{int(datetime.now().timestamp())}.jpg", "image/jpeg", key=f"jpg_{message['timestamp']}", use_container_width=True)
+
                         except Exception as e:
                             st.error(f"Error displaying generated image: {e}")
                             st.markdown(content) # Fallback to show raw content
                     else:
-                        parts = message['content'].split('```')
+                        parts = content.split('```')
                         for i, part in enumerate(parts):
                             if not part.strip():
                                 continue
@@ -1629,24 +1673,21 @@ apply_cosmic_theme(fig, 'Supernova')
                             else:
                                 st.markdown(part)
                 with col2:
-                    if st.button("🔊", key=f"play_{message['timestamp']}", help="Read aloud"):
-                        st.session_state.audio_to_play = message['content']
-                        st.rerun()
+                    if not is_image_message:
+                        if st.button("🔊", key=f"play_{message['timestamp']}", help="Read aloud"):
+                            st.session_state.audio_to_play = content
+                            st.rerun()
                 with col3:
                     if st.button("⚖️", key=f"ethics_{message['timestamp']}", help="Analyze for bias and ethics"):
                         st.session_state.ethical_analysis_request = {
-                            'content': message['content'],
+                            'content': content,
                             'timestamp': message['timestamp']
                         }
                         st.rerun()
-                with col4:
-                    if st.button("🎨", key=f"canvas_{message['timestamp']}", help="Toggle Canvas Mode"):
-                        st.session_state.canvas_mode = not st.session_state.get('canvas_mode', False)
-                        st.rerun()
             else:
-                st.markdown(message["content"])
+                st.markdown(content)
 
-            if message["role"] == "assistant" and message.get("suggestions"):
+            if message["role"] == "assistant" and message.get("suggestions") and not is_image_message:
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown("##### 💡 Suggested questions:")
                 
