@@ -711,7 +711,10 @@ def generate_art_from_text(prompt, negative_prompt=None):
         # This model name is correct for image generation.
         image_model = genai.GenerativeModel("gemini-2.0-flash-exp-image-generation")
         
-        enhanced_prompt = f"A cinematic, high-detail, photorealistic masterpiece, 8k resolution: {prompt}"
+        # The model appears to be behaving like a text model. Prepending the prompt
+        # with an explicit instruction to generate an image might help guide it if
+        # it's a multi-modal model that is defaulting to a text response.
+        enhanced_prompt = f"Generate an image: A cinematic, high-detail, photorealistic masterpiece, 8k resolution: {prompt}"
 
         final_prompt_parts = [enhanced_prompt]
         if negative_prompt:
