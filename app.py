@@ -717,16 +717,11 @@ def generate_art_from_text(prompt, negative_prompt=None):
         if negative_prompt:
             final_prompt_parts.append(f"Negative prompt: {negative_prompt}")
 
-        # The `response_modalities` parameter is deprecated. The new approach for
-        # requesting text alongside an image is to use `generation_config` with an
-        # `output_config` dictionary.
+        # For this image generation model, requesting both image and text is implicit.
+        # We remove the generation_config, and the model will return both parts
+        # if it generates a description.
         response = image_model.generate_content(
-            final_prompt_parts,
-            generation_config={
-                "output_config": {
-                    "include_text_in_response": True
-                }
-            }
+            final_prompt_parts
         )
         
         image_bytes = None
