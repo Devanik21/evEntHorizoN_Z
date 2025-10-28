@@ -717,16 +717,16 @@ def generate_art_from_text(prompt, negative_prompt=None):
         if negative_prompt:
             final_prompt_parts.append(f"Negative prompt: {negative_prompt}")
 
-        # --- THIS IS THE KEY FIX ---
-        # The working example `dream_canvas.py` uses the parameter name `config`.
-        # While current documentation may suggest `generation_config`, the observed
-        # behavior indicates that for your environment, `config` is the correct
-        # parameter that is being recognized by the API client.
+        # The `response_modalities` parameter is deprecated. The new approach for
+        # requesting text alongside an image is to use `generation_config` with an
+        # `output_config` dictionary.
         response = image_model.generate_content(
             final_prompt_parts,
-            config=genai.types.GenerationConfig(
-                response_modalities=["image", "text"]
-            )
+            generation_config={
+                "output_config": {
+                    "include_text_in_response": True
+                }
+            }
         )
         
         image_bytes = None
