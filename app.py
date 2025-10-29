@@ -155,6 +155,12 @@ def get_session_persona(db, session_id):
     session = sessions_table.get(doc_id=session_id)
     return session.get('persona_name', 'Cosmic Intelligence') if session else 'Cosmic Intelligence'
 
+def update_session_persona(db, session_id, new_persona_name):
+    """Update the persona for a specific chat session."""
+    sessions_table = db.table('sessions')
+    if sessions_table.get(doc_id=session_id):
+        sessions_table.update({'persona_name': new_persona_name}, doc_ids=[session_id])
+
 # --- VISUALIZATION THEMES ---
 COSMIC_THEMES = {
     'Nebula Burst': {
@@ -867,6 +873,23 @@ check_password()
 # Initialize database
 db = init_database()
 
+# --- CONSTANTS FOR CALLBACKS ---
+CANVAS_MODE_OPTION = "🎨 Image Generation (Canvas)"
+
+# --- CALLBACKS ---
+def on_mode_change():
+    """Callback function to handle changes in the OPERATING MODE selectbox."""
+    selected_mode = st.session_state.mode_selector # Get value from the widget's key
+    
+    if selected_mode == CANVAS_MODE_OPTION:
+        st.session_state.canvas_mode = True
+    else:
+        st.session_state.canvas_mode = False
+        st.session_state.selected_persona = selected_mode
+        # Also update the current session's persona in the DB if a session is active
+        if st.session_state.current_session_id:
+            update_session_persona(db, st.session_state.current_session_id, selected_mode)
+
 # Initialize session state
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = None
@@ -911,7 +934,6 @@ with st.sidebar:
 
     # Define all possible modes
     PERSONA_MODES = ["Cognitive Twin"] + list(PERSONAS.keys())
-    CANVAS_MODE_OPTION = "🎨 Image Generation (Canvas)"
     MODE_OPTIONS = PERSONA_MODES + [CANVAS_MODE_OPTION]
 
     # Determine the current mode to set the index of the selectbox
@@ -920,25 +942,23 @@ with st.sidebar:
         current_mode = 'Cognitive Twin' # Fallback
 
     # Create the unified dropdown
-    selected_mode = st.selectbox(
+    st.selectbox(
         "Select Mode",
         options=MODE_OPTIONS,
         index=MODE_OPTIONS.index(current_mode),
+        key="mode_selector",
+        on_change=on_mode_change,
         label_visibility="collapsed",
         help="Select a persona, the adaptive 'Cognitive Twin', or 'Canvas Mode' for image generation."
     )
 
-    # Update session state based on the selection
-    if selected_mode == CANVAS_MODE_OPTION:
-        st.session_state.canvas_mode = True
-    else:
-        st.session_state.canvas_mode = False
-        st.session_state.selected_persona = selected_mode
-
     # Display the persona of the active chat
     if st.session_state.current_session_id:
-        active_persona = get_session_persona(db, st.session_state.current_session_id)
-        st.caption(f"Active Persona: **{active_persona}**")
+        if st.session_state.get('canvas_mode', False):
+            st.caption("Active Mode: **Image Generation**")
+        else:
+            active_persona = get_session_persona(db, st.session_state.current_session_id)
+            st.caption(f"Active Persona: **{active_persona}**")
     st.markdown("---")
     st.markdown("### 🌌 CHAT SESSIONS")
     
