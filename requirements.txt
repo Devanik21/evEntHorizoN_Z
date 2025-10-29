@@ -12,4 +12,4 @@ statsmodels
 scikit-learn
 tensorflow
 markdown2
-xhtml2pdf
+
