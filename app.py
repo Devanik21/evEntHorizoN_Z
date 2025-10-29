@@ -1043,12 +1043,18 @@ with st.sidebar:
                 use_container_width=True
             )
 
-    # --- ADVANCED CREATION TOOLS ---
     st.markdown("---")
+    # --- ADVANCED CREATION TOOLS ---
     with st.expander("🛠️ Advanced Creation Tools"):
-        tab_genesis, tab_alchemist = st.tabs(["🚀 Genesis Engine", "🧪 Code Alchemist"])
+        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist"]
 
-        with tab_genesis:
+        selected_tool = st.selectbox(
+            "Select a creation tool",
+            options=TOOL_OPTIONS,
+            label_visibility="collapsed"
+        )
+
+        if selected_tool == "🚀 Genesis Engine":
             st.markdown("<small>Describe a web tool or dashboard. The AI will generate a complete Streamlit app script for you to download.</small>", unsafe_allow_html=True)
             app_description = st.text_area(
                 "Describe the app you want to build...",
@@ -1138,7 +1144,7 @@ Your task is to take a user's description of a web tool or dashboard and generat
                     on_click=clear_genesis_engine_output
                 )
 
-        with tab_alchemist:
+        elif selected_tool == "🧪 Code Alchemist":
             st.markdown("<small>Paste your code and have a conversation with the AI to refactor it in real-time.</small>", unsafe_allow_html=True)
 
             # If no active session, show initial code input
