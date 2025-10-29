@@ -1034,38 +1034,6 @@ st.markdown("""
 
 # Sidebar with chat interface
 with st.sidebar:
-    # --- Operating Mode Selection ---
-    st.markdown("### ✨ OPERATING MODE")
-    st.markdown("<small>Select a persona for text chat or switch to image generation.</small>", unsafe_allow_html=True)
-
-    # Define all possible modes
-    PERSONA_MODES = ["Cognitive Twin"] + list(PERSONAS.keys())
-    MODE_OPTIONS = PERSONA_MODES + [CANVAS_MODE_OPTION]
-
-    # Determine the current mode to set the index of the selectbox
-    current_mode = CANVAS_MODE_OPTION if st.session_state.get('canvas_mode', False) else st.session_state.get('selected_persona', 'Cognitive Twin')
-    if current_mode not in MODE_OPTIONS:
-        current_mode = 'Cognitive Twin' # Fallback
-
-    # Create the unified dropdown
-    st.selectbox(
-        "Select Mode",
-        options=MODE_OPTIONS,
-        index=MODE_OPTIONS.index(current_mode),
-        key="mode_selector",
-        on_change=on_mode_change,
-        label_visibility="collapsed",
-        help="Select a persona, the adaptive 'Cognitive Twin', or 'Canvas Mode' for image generation."
-    )
-
-    # Display the persona of the active chat
-    if st.session_state.current_session_id:
-        if st.session_state.get('canvas_mode', False):
-            st.caption("Active Mode: **Image Generation**")
-        else:
-            active_persona = get_session_persona(db, st.session_state.current_session_id)
-            st.caption(f"Active Persona: **{active_persona}**")
-    st.markdown("---")
     st.markdown("### 🌌 CHAT SESSIONS")
     
     # New chat button
@@ -1148,6 +1116,38 @@ with st.sidebar:
             safe_filename = "".join(c for c in current_name if c.isalnum() or c in (' ', '_')).rstrip().replace(' ', '_')
             display_export_buttons(markdown_export, safe_filename)
 
+    st.markdown("---")
+    # --- Operating Mode Selection ---
+    st.markdown("### ✨ OPERATING MODE")
+    st.markdown("<small>Select a persona for text chat or switch to image generation.</small>", unsafe_allow_html=True)
+
+    # Define all possible modes
+    PERSONA_MODES = ["Cognitive Twin"] + list(PERSONAS.keys())
+    MODE_OPTIONS = PERSONA_MODES + [CANVAS_MODE_OPTION]
+
+    # Determine the current mode to set the index of the selectbox
+    current_mode = CANVAS_MODE_OPTION if st.session_state.get('canvas_mode', False) else st.session_state.get('selected_persona', 'Cognitive Twin')
+    if current_mode not in MODE_OPTIONS:
+        current_mode = 'Cognitive Twin' # Fallback
+
+    # Create the unified dropdown
+    st.selectbox(
+        "Select Mode",
+        options=MODE_OPTIONS,
+        index=MODE_OPTIONS.index(current_mode),
+        key="mode_selector",
+        on_change=on_mode_change,
+        label_visibility="collapsed",
+        help="Select a persona, the adaptive 'Cognitive Twin', or 'Canvas Mode' for image generation."
+    )
+
+    # Display the persona of the active chat
+    if st.session_state.current_session_id:
+        if st.session_state.get('canvas_mode', False):
+            st.caption("Active Mode: **Image Generation**")
+        else:
+            active_persona = get_session_persona(db, st.session_state.current_session_id)
+            st.caption(f"Active Persona: **{active_persona}**")
     st.markdown("---")
     # --- ADVANCED CREATION TOOLS ---
     with st.expander("🛠️ Advanced Creation Tools"):
