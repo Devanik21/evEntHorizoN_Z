@@ -1023,24 +1023,21 @@ with st.sidebar:
                 use_container_width=True
             )
 
-    # --- ADVANCED CREATION TOOLS ---
+    # --- GENESIS ENGINE: On-Demand App Generation ---
     st.markdown("---")
-    with st.expander("🛠️ Advanced Creation Tools"):
-        tab_genesis, tab_alchemist = st.tabs(["🚀 Genesis Engine", "🧪 Code Alchemist"])
+    with st.expander("🚀 Genesis Engine: Create an App"):
+        st.markdown("<small>Describe a web tool or dashboard. The AI will generate a complete Streamlit app script for you to download.</small>", unsafe_allow_html=True)
+        app_description = st.text_area(
+            "Describe the app you want to build...",
+            placeholder="e.g., 'An app to track stocks with a price chart and news.'",
+            height=150,
+            key="genesis_input"
+        )
 
-        with tab_genesis:
-            st.markdown("<small>Describe a web tool or dashboard. The AI will generate a complete Streamlit app script for you to download.</small>", unsafe_allow_html=True)
-            app_description = st.text_area(
-                "Describe the app you want to build...",
-                placeholder="e.g., 'An app to track stocks with a price chart and news.'",
-                height=150,
-                key="genesis_input"
-            )
-
-            if st.button("✨ Generate App Script", key="genesis_button", use_container_width=True):
-                if app_description:
-                    with st.spinner("🛠️ Architecting your application... Please wait."):
-                        GENESIS_ENGINE_PROMPT = f"""
+        if st.button("✨ Generate App Script", key="genesis_button", use_container_width=True):
+            if app_description:
+                with st.spinner("🛠️ Architecting your application... Please wait."):
+                    GENESIS_ENGINE_PROMPT = f"""
 You are the Genesis Engine, an expert AI software architect specializing in creating self-contained, multi-file Streamlit applications.
 Your task is to take a user's description of a web tool or dashboard and generate all the necessary files, packaged as a JSON object.
 
@@ -1067,91 +1064,92 @@ Your task is to take a user's description of a web tool or dashboard and generat
 **User's Request:**
 {app_description}
 """
-                        try:
-                            response = model.generate_content(GENESIS_ENGINE_PROMPT)
-                            response_text = response.text.strip()
+                    try:
+                        response = model.generate_content(GENESIS_ENGINE_PROMPT)
+                        response_text = response.text.strip()
 
-                            # Extract JSON from markdown block
-                            if response_text.startswith("```json"):
-                                response_text = response_text[len("```json"):].strip()
-                            if response_text.endswith("```"):
-                                response_text = response_text[:-len("```")].strip()
-                            
-                            # Parse the JSON response
-                            generated_files = json.loads(response_text)
-                            st.session_state.generated_app_files = generated_files
-                            
-                            safe_name = "".join(c for c in app_description if c.isalnum() or c == ' ').strip()
-                            safe_name = safe_name.replace(' ', '_').lower()
-                            if not safe_name:
-                                safe_name = 'generated_app'
-                            st.session_state.generated_app_name = f"{safe_name[:40]}.zip"
+                        # Extract JSON from markdown block
+                        if response_text.startswith("```json"):
+                            response_text = response_text[len("```json"):].strip()
+                        if response_text.endswith("```"):
+                            response_text = response_text[:-len("```")].strip()
+                        
+                        # Parse the JSON response
+                        generated_files = json.loads(response_text)
+                        st.session_state.generated_app_files = generated_files
+                        
+                        safe_name = "".join(c for c in app_description if c.isalnum() or c == ' ').strip()
+                        safe_name = safe_name.replace(' ', '_').lower()
+                        if not safe_name:
+                            safe_name = 'generated_app'
+                        st.session_state.generated_app_name = f"{safe_name[:40]}.zip"
 
-                        except Exception as e:
-                            st.error(f"Cosmic interference during generation: {e}")
-                            if 'generated_app_files' in st.session_state:
-                                del st.session_state.generated_app_files
-                else:
-                    st.warning("Please describe the app you want to build.")
-
-            # Display download button if files have been generated
-            if "generated_app_files" in st.session_state and st.session_state.generated_app_files:
-                st.success("✅ Your app files are ready!")
-                
-                # Create zip in memory
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
-                    for file_name, content in st.session_state.generated_app_files.items():
-                        zip_file.writestr(file_name, content)
-                zip_buffer.seek(0)
-
-                def clear_genesis_engine_output():
-                    st.session_state.pop("generated_app_files", None)
-                    st.session_state.pop("generated_app_name", None)
-
-                st.download_button(
-                    label="📥 Download Your App (.zip)",
-                    data=zip_buffer,
-                    file_name=st.session_state.get("generated_app_name", "generated_app.zip"),
-                    mime="application/zip",
-                    use_container_width=True,
-                    on_click=clear_genesis_engine_output
-                )
-
-        with tab_alchemist:
-            st.markdown("<small>Paste your code and have a conversation with the AI to refactor it in real-time.</small>", unsafe_allow_html=True)
-
-            # If no active session, show initial code input
-            if st.session_state.get('alchemist_code') is None:
-                initial_code = st.text_area(
-                    "Paste your code here to begin...",
-                    height=250,
-                    key="alchemist_initial_input"
-                )
-                if st.button("Start Refactoring Session", key="alchemist_start", use_container_width=True):
-                    if initial_code:
-                        st.session_state.alchemist_code = initial_code
-                        st.session_state.alchemist_explanation = "Your code is ready. What would you like to change?"
-                        st.rerun()
-                    else:
-                        st.warning("Please paste some code to start.")
-            
-            # If there is an active session, show the interactive refactoring UI
+                    except Exception as e:
+                        st.error(f"Cosmic interference during generation: {e}")
+                        if 'generated_app_files' in st.session_state:
+                            del st.session_state.generated_app_files
             else:
-                st.info(st.session_state.get('alchemist_explanation', ''))
-                
-                st.code(st.session_state.alchemist_code, language='python')
+                st.warning("Please describe the app you want to build.")
 
-                refactor_instruction = st.text_area(
-                    "How should I refactor this?",
-                    placeholder="e.g., 'Convert this to an asynchronous version.'",
-                    key="alchemist_instruction"
-                )
+        # Display download button if files have been generated
+        if "generated_app_files" in st.session_state and st.session_state.generated_app_files:
+            st.success("✅ Your app files are ready!")
+            
+            # Create zip in memory
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+                for file_name, content in st.session_state.generated_app_files.items():
+                    zip_file.writestr(file_name, content)
+            zip_buffer.seek(0)
 
-                if st.button("✨ Refactor", key="alchemist_refactor_button", use_container_width=True):
-                    if refactor_instruction:
-                        with st.spinner("⚗️ The Alchemist is at work..."):
-                            CODE_ALCHEMIST_PROMPT = f"""You are the "Code Alchemist," a super-intelligent pair programmer that refactors code through conversation.
+            def clear_genesis_engine_output():
+                st.session_state.pop("generated_app_files", None)
+                st.session_state.pop("generated_app_name", None)
+
+            st.download_button(
+                label="📥 Download Your App (.zip)",
+                data=zip_buffer,
+                file_name=st.session_state.get("generated_app_name", "generated_app.zip"),
+                mime="application/zip",
+                use_container_width=True,
+                on_click=clear_genesis_engine_output
+            )
+
+    st.markdown("---")
+    with st.expander("🧪 Code Alchemist: Live Refactoring"):
+        st.markdown("<small>Paste your code and have a conversation with the AI to refactor it in real-time.</small>", unsafe_allow_html=True)
+
+        # If no active session, show initial code input
+        if st.session_state.get('alchemist_code') is None:
+            initial_code = st.text_area(
+                "Paste your code here to begin...",
+                height=250,
+                key="alchemist_initial_input"
+            )
+            if st.button("Start Refactoring Session", key="alchemist_start", use_container_width=True):
+                if initial_code:
+                    st.session_state.alchemist_code = initial_code
+                    st.session_state.alchemist_explanation = "Your code is ready. What would you like to change?"
+                    st.rerun()
+                else:
+                    st.warning("Please paste some code to start.")
+        
+        # If there is an active session, show the interactive refactoring UI
+        else:
+            st.info(st.session_state.get('alchemist_explanation', ''))
+            
+            st.code(st.session_state.alchemist_code, language='python')
+
+            refactor_instruction = st.text_area(
+                "How should I refactor this?",
+                placeholder="e.g., 'Convert this to an asynchronous version.'",
+                key="alchemist_instruction"
+            )
+
+            if st.button("✨ Refactor", key="alchemist_refactor_button", use_container_width=True):
+                if refactor_instruction:
+                    with st.spinner("⚗️ The Alchemist is at work..."):
+                        CODE_ALCHEMIST_PROMPT = f"""You are the "Code Alchemist," a super-intelligent pair programmer that refactors code through conversation.
 Your task is to take a block of code and a user's instruction, then rewrite the code and explain your changes.
 
 **INSTRUCTIONS:**
@@ -1169,22 +1167,22 @@ Your task is to take a block of code and a user's instruction, then rewrite the 
 "{refactor_instruction}"
 
 Begin your work now."""
-                            try:
-                                response = model.generate_content(CODE_ALCHEMIST_PROMPT)
-                                response_text = response.text.strip().replace("```json", "").replace("```", "")
-                                alchemist_result = json.loads(response_text)
-                                st.session_state.alchemist_code = alchemist_result.get("new_code", st.session_state.alchemist_code)
-                                st.session_state.alchemist_explanation = alchemist_result.get("explanation", "An unknown transformation occurred.")
-                            except Exception as e:
-                                st.session_state.alchemist_explanation = f"A magical accident occurred: {e}"
-                        st.rerun()
-                    else:
-                        st.warning("Please provide a refactoring instruction.")
-
-                if st.button("End Session", key="alchemist_end_button", use_container_width=True):
-                    st.session_state.alchemist_code = None
-                    st.session_state.alchemist_explanation = None
+                        try:
+                            response = model.generate_content(CODE_ALCHEMIST_PROMPT)
+                            response_text = response.text.strip().replace("```json", "").replace("```", "")
+                            alchemist_result = json.loads(response_text)
+                            st.session_state.alchemist_code = alchemist_result.get("new_code", st.session_state.alchemist_code)
+                            st.session_state.alchemist_explanation = alchemist_result.get("explanation", "An unknown transformation occurred.")
+                        except Exception as e:
+                            st.session_state.alchemist_explanation = f"A magical accident occurred: {e}"
                     st.rerun()
+                else:
+                    st.warning("Please provide a refactoring instruction.")
+
+            if st.button("End Session", key="alchemist_end_button", use_container_width=True):
+                st.session_state.alchemist_code = None
+                st.session_state.alchemist_explanation = None
+                st.rerun()
 
     st.markdown("---")
     st.markdown("### COSMIC CHAT")
