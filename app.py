@@ -909,6 +909,8 @@ if "alchemist_code" not in st.session_state:
     st.session_state.alchemist_code = None
 if "alchemist_explanation" not in st.session_state:
     st.session_state.alchemist_explanation = None
+if "multiverse_report" not in st.session_state:
+    st.session_state.multiverse_report = None
 if "canvas_mode" not in st.session_state:
     st.session_state.canvas_mode = False
 
@@ -1046,7 +1048,7 @@ with st.sidebar:
     st.markdown("---")
     # --- ADVANCED CREATION TOOLS ---
     with st.expander("🛠️ Advanced Creation Tools"):
-        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist"]
+        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist", "🌍 Multiverse Modeler"]
 
         selected_tool = st.selectbox(
             "Select a creation tool",
@@ -1210,6 +1212,67 @@ Begin your work now."""
                 if st.button("End Session", key="alchemist_end_button", use_container_width=True):
                     st.session_state.alchemist_code = None
                     st.session_state.alchemist_explanation = None
+                    st.rerun()
+
+        elif selected_tool == "🌍 Multiverse Modeler":
+            st.markdown("<small>Propose a historical event and a point of divergence. The AI will model a plausible alternate timeline and its consequences.</small>", unsafe_allow_html=True)
+            
+            historical_event = st.text_input(
+                "Historical Event",
+                placeholder="e.g., The sinking of the Titanic",
+                key="multiverse_event_input"
+            )
+            
+            divergence_point = st.text_area(
+                "Point of Divergence",
+                placeholder="e.g., It narrowly missed the iceberg.",
+                height=100,
+                key="multiverse_divergence_input"
+            )
+
+            if st.button("🌌 Model Alternate Timeline", key="multiverse_button", use_container_width=True):
+                if historical_event and divergence_point:
+                    with st.spinner("⏳ Calculating temporal probabilities..."):
+                        MULTIVERSE_MODELER_PROMPT = f"""
+You are the "Multiverse Modeler," a historian from a higher dimension with access to the Akashic records of all possible timelines.
+Your task is to analyze a pivotal historical event and a user-specified "point of divergence" to construct a plausible alternate history.
+
+**INSTRUCTIONS:**
+1.  **Analyze the Nexus Event:** Understand the provided "Historical Event" and its real-world consequences.
+2.  **Introduce the Divergence:** Consider the "Point of Divergence" as the single change that creates a new branch of reality.
+3.  **Model Cascading Consequences:** Reason through the first, second, and third-order effects of this change. How would it impact society, technology, culture, politics, and key historical figures?
+4.  **Structure the Report:** Generate a "Divergence Report" in Markdown format. The report should include:
+    *   A compelling title for the new timeline.
+    *   **Nexus Point:** A brief summary of the event and divergence.
+    *   **Immediate Aftermath (1-10 years):** The short-term changes.
+    *   **Generational Impact (25-100 years):** The medium-term societal shifts.
+    *   **The World Today (Present Day):** A description of what the world in this alternate timeline looks like now.
+    *   **Key Differences:** A bulleted list summarizing the most significant deviations from our own timeline.
+5.  **Maintain Plausibility:** While creative, your alternate history must be grounded in logical cause-and-effect. Avoid pure fantasy unless the divergence point itself is fantastical.
+
+---
+**Historical Event:**
+{historical_event}
+
+**Point of Divergence:**
+{divergence_point}
+---
+
+Begin your temporal analysis now.
+"""
+                        try:
+                            response = model.generate_content(MULTIVERSE_MODELER_PROMPT)
+                            st.session_state.multiverse_report = response.text
+                        except Exception as e:
+                            st.session_state.multiverse_report = f"A temporal paradox occurred: {e}"
+                else:
+                    st.warning("Please provide both a historical event and a point of divergence.")
+
+            if "multiverse_report" in st.session_state and st.session_state.multiverse_report:
+                st.markdown("---")
+                st.markdown(st.session_state.multiverse_report)
+                if st.button("Clear Report", key="clear_multiverse_report", use_container_width=True):
+                    st.session_state.multiverse_report = None
                     st.rerun()
 
     st.markdown("---")
