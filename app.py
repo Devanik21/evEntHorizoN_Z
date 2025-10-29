@@ -909,6 +909,8 @@ if "alchemist_code" not in st.session_state:
     st.session_state.alchemist_code = None
 if "alchemist_explanation" not in st.session_state:
     st.session_state.alchemist_explanation = None
+if "oneiros_output" not in st.session_state:
+    st.session_state.oneiros_output = None
 if "multiverse_report" not in st.session_state:
     st.session_state.multiverse_report = None
 if "canvas_mode" not in st.session_state:
@@ -1048,7 +1050,7 @@ with st.sidebar:
     st.markdown("---")
     # --- ADVANCED CREATION TOOLS ---
     with st.expander("🛠️ Advanced Creation Tools"):
-        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist", "🌍 Multiverse Modeler"]
+        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist", "🌍 Multiverse Modeler", "🎨 Oneiros Project"]
 
         selected_tool = st.selectbox(
             "Select a creation tool",
@@ -1273,6 +1275,96 @@ Begin your temporal analysis now.
                 st.markdown(st.session_state.multiverse_report)
                 if st.button("Clear Report", key="clear_multiverse_report", use_container_width=True):
                     st.session_state.multiverse_report = None
+                    st.rerun()
+        
+        elif selected_tool == "🎨 Oneiros Project":
+            st.markdown("<small>Input a dream, a feeling, or an abstract concept. The AI will weave it into a multi-sensory tapestry of image, story, and sound.</small>", unsafe_allow_html=True)
+            
+            dream_input = st.text_area(
+                "Describe your abstract concept...",
+                placeholder="e.g., 'The feeling of nostalgia for a place that never existed.' or 'A dream about a city made of glass where it always rains upwards.'",
+                height=150,
+                key="oneiros_input"
+            )
+
+            if st.button("🕸️ Weave the Dream", key="oneiros_button", use_container_width=True):
+                if dream_input:
+                    st.session_state.oneiros_output = {} # Reset previous output
+                    with st.spinner("Translating the subconscious... (This may take a moment)"):
+                        try:
+                            # Step 1: Generate Image
+                            image_prompt = f"A surreal, dream-like, abstract visualization of the feeling of '{dream_input}'. Highly detailed, atmospheric, digital art."
+                            image_bytes, _ = generate_art_from_text(image_prompt)
+                            if image_bytes:
+                                st.session_state.oneiros_output['image'] = base64.b64encode(image_bytes).decode('utf-8')
+
+                            # Step 2: Generate Story
+                            story_prompt = f"You are a surrealist poet. Write a short, abstract, dream-like story or poem about the feeling of '{dream_input}'. Evoke emotion through metaphor and strange imagery, not direct explanation."
+                            story_text = get_cosmic_response(story_prompt, "You are a surrealist poet.")
+                            st.session_state.oneiros_output['story'] = story_text
+
+                            # Step 3: Generate Audio
+                            sonification_prompt = f"""You are a sound artist who creates ambient, dream-like soundscapes from abstract concepts.
+Your task is to generate Python code that sonifies the feeling of '{dream_input}'.
+
+**INSTRUCTIONS:**
+1.  **Design a Soundscape:** Imagine the feeling as sound. Should it be high-pitched, low, dissonant, harmonic, sparse, dense? Use techniques like frequency modulation (FM synthesis), amplitude modulation (tremolo), or layering sine waves at different octaves to create a dreamy, ambient texture.
+2.  **Generate Python Code:** Write a Python script to create this soundscape.
+    *   The script MUST use `numpy`, `scipy.io.wavfile`, `scipy.signal`, and `io.BytesIO`.
+    *   The final audio output must be written to an in-memory `io.BytesIO` buffer.
+    *   **The final buffer object MUST be named `wav_buffer`.**
+3.  **Output Format:** Your entire response MUST be a single, valid JSON object with one key: "code".
+
+**Example JSON Output:**
+```json
+{{
+  "code": "import numpy as np\\nfrom scipy.io import wavfile\\nfrom scipy import signal\\nimport io\\n\\nsample_rate = 44100\\nduration = 15.0\\nt = np.linspace(0., duration, int(sample_rate * duration))\\n\\n# Base drone with slow tremolo\\nmod_freq = 0.2\\namplitude = np.sin(2. * np.pi * mod_freq * t) * 0.5 + 0.5\\nbase_wave = amplitude * np.sin(2. * np.pi * 110.0 * t)\\n\\n# High-pitched shimmering effect\\nshimmer_freq = np.sin(2. * np.pi * 0.5 * t) * 10 + 880\\nshimmer_wave = np.sin(2. * np.pi * shimmer_freq * t) * 0.2\\n\\naudio_data = (base_wave + shimmer_wave) * 0.4\\naudio_data = np.int16(audio_data / np.max(np.abs(audio_data)) * 32767)\\n\\nwav_buffer = io.BytesIO()\\nwavfile.write(wav_buffer, sample_rate, audio_data)\\nwav_buffer.seek(0)"
+}}
+```
+Begin your composition now."""
+                            
+                            symphony_response = get_cosmic_response(sonification_prompt, "You are a sound artist.")
+                            symphony_response_text = symphony_response.strip().replace("```json", "").replace("```", "")
+                            symphony_data = json.loads(symphony_response_text)
+                            code_to_run = symphony_data.get("code", "")
+
+                            if code_to_run:
+                                local_scope = {'np': np, 'io': io, 'wavfile': wavfile, 'signal': signal}
+                                exec(code_to_run, local_scope)
+                                if 'wav_buffer' in local_scope:
+                                    st.session_state.oneiros_output['audio'] = local_scope['wav_buffer'].getvalue()
+                                else:
+                                    st.session_state.oneiros_output['audio_error'] = "The generated code did not produce a 'wav_buffer'."
+                            else:
+                                st.session_state.oneiros_output['audio_error'] = "The AI did not generate any code for the soundscape."
+
+                        except Exception as e:
+                            st.error(f"An error occurred while weaving the dream: {e}")
+                            st.session_state.oneiros_output = None # Clear partial results on error
+                else:
+                    st.warning("Please describe a dream or feeling to begin.")
+
+            if st.session_state.get("oneiros_output"):
+                st.markdown("---")
+                st.markdown("#### The Woven Dream")
+                output = st.session_state.oneiros_output
+
+                if 'image' in output:
+                    image_bytes = base64.b64decode(output['image'])
+                    st.image(image_bytes, caption="A vision from the subconscious.", use_container_width=True)
+                
+                if 'story' in output:
+                    st.markdown("##### A Story from the Ether")
+                    st.markdown(f"> {output['story']}")
+
+                if 'audio' in output:
+                    st.markdown("##### The Sound of the Feeling")
+                    st.audio(output['audio'], format='audio/wav')
+                elif 'audio_error' in output:
+                    st.warning(f"Could not generate soundscape: {output['audio_error']}")
+
+                if st.button("Clear Dream", key="clear_oneiros_output", use_container_width=True):
+                    st.session_state.oneiros_output = None
                     st.rerun()
 
     st.markdown("---")
