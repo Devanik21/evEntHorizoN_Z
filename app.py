@@ -155,12 +155,6 @@ def get_session_persona(db, session_id):
     session = sessions_table.get(doc_id=session_id)
     return session.get('persona_name', 'Cosmic Intelligence') if session else 'Cosmic Intelligence'
 
-def update_session_persona(db, session_id, new_persona_name):
-    """Update the persona for a specific chat session."""
-    sessions_table = db.table('sessions')
-    if sessions_table.get(doc_id=session_id):
-        sessions_table.update({'persona_name': new_persona_name}, doc_ids=[session_id])
-
 # --- VISUALIZATION THEMES ---
 COSMIC_THEMES = {
     'Nebula Burst': {
@@ -934,28 +928,17 @@ with st.sidebar:
         help="Select a persona, the adaptive 'Cognitive Twin', or 'Canvas Mode' for image generation."
     )
 
-    # --- Mode Change Logic ---
-    # Determine the mode from the previous run to detect changes
-    previous_mode = CANVAS_MODE_OPTION if st.session_state.get('canvas_mode', False) else st.session_state.get('selected_persona', 'Cognitive Twin')
-    mode_changed = selected_mode != previous_mode
-
     # Update session state based on the selection
     if selected_mode == CANVAS_MODE_OPTION:
         st.session_state.canvas_mode = True
     else:
         st.session_state.canvas_mode = False
         st.session_state.selected_persona = selected_mode
-        # If the persona was changed for an active session, update it in the database
-        if mode_changed and st.session_state.current_session_id:
-            update_session_persona(db, st.session_state.current_session_id, selected_mode)
 
     # Display the persona of the active chat
     if st.session_state.current_session_id:
-        if st.session_state.get('canvas_mode', False):
-            st.caption("Active Mode: **Image Generation**")
-        else:
-            active_persona = get_session_persona(db, st.session_state.current_session_id)
-            st.caption(f"Active Persona: **{active_persona}**")
+        active_persona = get_session_persona(db, st.session_state.current_session_id)
+        st.caption(f"Active Persona: **{active_persona}**")
     st.markdown("---")
     st.markdown("### 🌌 CHAT SESSIONS")
     
