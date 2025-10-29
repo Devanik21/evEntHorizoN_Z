@@ -14,7 +14,7 @@ import zipfile
 import pandas as pd
 import numpy as np
 import markdown2
-from xhtml2pdf import pisa
+from weasyprint import HTML
 
 # --- Plotly for Advanced Visualizations ---
 import plotly.graph_objects as go
@@ -222,66 +222,79 @@ def apply_cosmic_theme(fig, theme_name='Nebula Burst'):
     return fig
 
 # --- EXPORT FUNCTIONS ---
-def create_pdf_from_markdown(markdown_content):
-    """Converts markdown content to a styled PDF in memory."""
-    # Convert markdown to HTML with extras for code blocks and tables
-    html = markdown2.markdown(markdown_content, extras=["fenced-code-blocks", "tables"])
+def create_pdf_from_markdown(markdown_content, base_filename="report"):
+    """Converts markdown content to a styled PDF in memory using WeasyPrint."""
+    # Convert markdown to HTML
+    html_body = markdown2.markdown(markdown_content, extras=["fenced-code-blocks", "tables"])
 
-    # Basic CSS for styling the PDF to look clean and professional
-    css = """
-    @page {
-        size: a4 portrait;
-        @frame content_frame {
-            left: 50pt; right: 50pt; top: 50pt; bottom: 50pt;
+    # Embed CSS for styling the PDF, inspired by your suggestion
+    pdf_css = """
+    <style>
+        @page { size: A4; margin: 1cm; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; font-size: 11pt; }
+        h1, h2, h3, h4, h5, h6 { color: #667eea; margin-top: 1.5em; margin-bottom: 0.5em; page-break-after: avoid; }
+        h1 { font-size: 2.2em; text-align: center; border-bottom: 2px solid #764ba2; padding-bottom: 0.5em; color: #764ba2; }
+        h2 { font-size: 1.8em; color: #764ba2; }
+        h3 { font-size: 1.4em; color: #667eea; }
+        p { margin-bottom: 1em; }
+        ul { list-style-type: disc; margin-left: 20px; margin-bottom: 1em; }
+        li { margin-bottom: 0.5em; }
+        strong { font-weight: bold; }
+        em { font-style: italic; }
+        pre {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            page-break-inside: avoid;
         }
-    }
-    body {
-        font-family: 'Helvetica', 'Arial', sans-serif;
-        color: #333;
-        line-height: 1.6;
-    }
-    h1, h2, h3, h4, h5 {
-        color: #1a1a1a;
-        font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
-        font-weight: 300;
-    }
-    h1 { font-size: 24pt; }
-    h2 { font-size: 18pt; }
-    h3 { font-size: 14pt; }
-    p, li {
-        font-size: 11pt;
-    }
-    pre {
-        background-color: #f4f4f4;
-        border: 1px solid #ddd;
-        padding: 10px;
-        border-radius: 4px;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-    }
-    code {
-        font-family: 'Courier New', Courier, monospace;
-        background-color: #f4f4f4;
-        padding: 2px 4px;
-        border-radius: 3px;
-    }
-    blockquote {
-        border-left: 4px solid #ccc;
-        padding-left: 10px;
-        color: #666;
-        margin-left: 0;
-    }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        blockquote {
+            border-left: 4px solid #ccc;
+            padding-left: 10px;
+            color: #666;
+            margin-left: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+            page-break-inside: auto;
+        }
+        tr { page-break-inside: avoid; page-break-after: auto; }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f2f2f2;
+            color: #333;
+            font-weight: bold;
+        }
+        a { color: #667eea; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
     """
 
-    full_html = f"<html><head><style>{css}</style></head><body>{html}</body></html>"
-    pdf_buffer = io.BytesIO()
-    pisa_status = pisa.CreatePDF(io.StringIO(full_html), dest=pdf_buffer, encoding='utf-8')
+    # Combine CSS and HTML content
+    final_html = f"<!DOCTYPE html><html><head><meta charset='utf-8'>{pdf_css}</head><body>{html_body}</body></html>"
 
-    if pisa_status.err:
+    # Generate PDF
+    try:
+        pdf_bytes = HTML(string=final_html, base_url=os.getcwd()).write_pdf()
+        return io.BytesIO(pdf_bytes)
+    except Exception as e:
+        st.error(f"PDF generation failed with WeasyPrint: {e}")
         return None
-    
-    pdf_buffer.seek(0)
-    return pdf_buffer
 
 def display_export_buttons(content, base_filename):
     """Displays download buttons for MD, TXT, and PDF formats."""
@@ -293,8 +306,8 @@ def display_export_buttons(content, base_filename):
     with col2:
         st.download_button("📥 TXT", content, f"{base_filename}.txt", "text/plain", use_container_width=True, help="Download as plain text file.")
     with col3:
-        pdf_buffer = create_pdf_from_markdown(content)
-        st.download_button("📥 PDF", pdf_buffer, f"{base_filename}.pdf", "application/pdf", use_container_width=True, help="Download as formatted PDF file.", disabled=not pdf_buffer)
+        pdf_buffer = create_pdf_from_markdown(content, base_filename)
+        st.download_button("📥 PDF", pdf_buffer, f"{base_filename}.pdf", "application/pdf", use_container_width=True, help="Download as formatted PDF file.", disabled=(pdf_buffer is None))
 
 # --- DATA TOOL FUNCTIONS ---
 def statistical_analysis(df):
