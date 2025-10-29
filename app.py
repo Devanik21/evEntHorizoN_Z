@@ -1448,6 +1448,7 @@ Provide your answer."""
     *   Assume data is in a pandas DataFrame named `df`.
     *   The final figure object MUST be named `fig`.
     *   You MUST call `apply_cosmic_theme(fig, 'Theme Name')`. Themes: 'Nebula Burst', 'Starlight', 'Void', 'Supernova', 'Quantum Foam'.
+    *   **DO NOT include any `import` statements.** The necessary libraries are already available.
 
 ---
 **User's Focus:** {story_focus if story_focus else "General exploratory analysis."}
