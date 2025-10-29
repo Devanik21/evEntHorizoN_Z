@@ -2267,6 +2267,26 @@ apply_cosmic_theme(fig, 'Supernova')
                 for file_name in message["files"]:
                     st.caption(f"📎 {file_name}")
     
+    # Chat input
+    if st.session_state.get('canvas_mode', False):
+        st.info("🎨 **Canvas Mode is active.** All prompts will generate images.")
+        prompt = st.text_area("🎨 Describe your masterpiece...", key="chat_input", height=100, placeholder="A majestic dragon soaring through a crystal cave filled with glowing gems...")
+        negative_prompt = st.text_area(
+            "🚫 Negative Prompt (Optional)",
+            height=80,
+            placeholder="e.g., blurry, text, watermark, extra limbs, bad anatomy...",
+            help="Tell the AI what to AVOID in the image. Separate concepts with commas.",
+            key="negative_prompt_input"
+        )
+        send_button_label = "CREATE"
+    else:
+        prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
+        negative_prompt = None
+        send_button_label = "SEND"
+
+    send_button = st.button(send_button_label, use_container_width=True, type="primary")
+    
+    st.markdown("---")
     # --- HOW-TO GUIDE ---
     with st.expander("✨ How to Use Event Horizon", expanded=False):
         st.markdown("""
@@ -2293,26 +2313,6 @@ apply_cosmic_theme(fig, 'Supernova')
         </small>
         """, unsafe_allow_html=True)
 
-    # Chat input
-    st.markdown("---")
-    if st.session_state.get('canvas_mode', False):
-        st.info("🎨 **Canvas Mode is active.** All prompts will generate images.")
-        prompt = st.text_area("🎨 Describe your masterpiece...", key="chat_input", height=100, placeholder="A majestic dragon soaring through a crystal cave filled with glowing gems...")
-        negative_prompt = st.text_area(
-            "🚫 Negative Prompt (Optional)",
-            height=80,
-            placeholder="e.g., blurry, text, watermark, extra limbs, bad anatomy...",
-            help="Tell the AI what to AVOID in the image. Separate concepts with commas.",
-            key="negative_prompt_input"
-        )
-        send_button_label = "CREATE"
-    else:
-        prompt = st.text_area("💫 Ask the cosmos...", key="chat_input", height=100)
-        negative_prompt = None
-        send_button_label = "SEND"
-
-    send_button = st.button(send_button_label, use_container_width=True, type="primary")
-    
     if send_button and prompt:
         if st.session_state.current_session_id is None:
             persona_name = st.session_state.get('selected_persona', 'Cosmic Intelligence')
