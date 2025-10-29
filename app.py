@@ -31,8 +31,6 @@ VISUALIZATION_INSTRUCTIONS = """
 When asked to create a plot or visualization, you MUST generate Python code using the `plotly` library.
 The code block must be a valid Python script that creates a figure object named `fig`.
 The code should be wrapped in ```python ... ```.
-**DO NOT include any `import` statements.** The necessary libraries (`plotly.graph_objects as go`, `plotly.express as px`, `pandas as pd`, `numpy as np`) and the data (`df` if a file was uploaded) are already available.
-**CRITICAL: You MUST NOT use `df.plot()` or any Matplotlib-related functions.** Only use `plotly.graph_objects` (aliased as `go`) or `plotly.express` (aliased as `px`).
 To make the plot match the app's theme, you MUST use one of the available cosmic themes by calling `apply_cosmic_theme(fig, 'Theme Name')` at the end of your script.
 Available 'Theme Name' options are: 'Nebula Burst', 'Starlight', 'Void', 'Supernova', 'Quantum Foam'.
 The final figure object in the script MUST be named `fig`.
