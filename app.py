@@ -1007,6 +1007,10 @@ if "multiverse_report" not in st.session_state:
     st.session_state.multiverse_report = None
 if "canvas_mode" not in st.session_state:
     st.session_state.canvas_mode = False
+if "mythos_output" not in st.session_state:
+    st.session_state.mythos_output = None
+if "persona_crafter_output" not in st.session_state:
+    st.session_state.persona_crafter_output = None
 
 # Main content area
 st.markdown("<br>", unsafe_allow_html=True)
@@ -1141,7 +1145,7 @@ with st.sidebar:
     st.markdown("---")
     # --- ADVANCED CREATION TOOLS ---
     with st.expander("🛠️ Advanced Creation Tools"):
-        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist", "🌍 Multiverse Modeler", "🎨 Oneiros Project"]
+        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist", "🌍 Multiverse Modeler", "🎨 Oneiros Project", "📜 Mythos Forge", "🎭 Persona Crafter"]
 
         selected_tool = st.selectbox(
             "Select a creation tool",
@@ -1465,6 +1469,107 @@ Begin your composition now."""
 
                 if st.button("Clear Dream", key="clear_oneiros_output", use_container_width=True):
                     st.session_state.oneiros_output = None
+                    st.rerun()
+        
+        elif selected_tool == "📜 Mythos Forge":
+            st.markdown("<small>Provide keywords and the AI will forge a new myth or legend from the cosmic ether.</small>", unsafe_allow_html=True)
+            
+            myth_keywords = st.text_input(
+                "Keywords for your myth",
+                placeholder="e.g., shadow, forgotten king, silent forest",
+                key="mythos_keywords_input"
+            )
+
+            if st.button("📜 Forge Myth", key="mythos_button", use_container_width=True):
+                if myth_keywords:
+                    st.session_state.mythos_output = None # Clear previous
+                    with st.spinner("📜 Gathering whispers from the void..."):
+                        MYTHOS_FORGE_PROMPT = f"""
+You are the "Mythos Forge," an ancient storyteller who weaves legends from the threads of raw concepts.
+Your task is to take a set of keywords and forge them into a short, compelling myth or legend.
+
+**INSTRUCTIONS:**
+1.  **Analyze Keywords:** Deeply consider the provided keywords: "{myth_keywords}".
+2.  **Weave a Narrative:** Create a story that is atmospheric and evocative. It should feel like a lost piece of folklore.
+3.  **Structure the Myth:**
+    *   Give it a fitting title.
+    *   Write the story in a few paragraphs.
+    *   The tone should be timeless and profound.
+4.  **Output Format:** Your response should be in Markdown.
+
+Begin your tale.
+"""
+                        try:
+                            response = model.generate_content(MYTHOS_FORGE_PROMPT)
+                            st.session_state.mythos_output = response.text
+                        except Exception as e:
+                            st.session_state.mythos_output = f"A thread of the story was lost: {e}"
+                else:
+                    st.warning("Please provide keywords to forge your myth.")
+
+            if "mythos_output" in st.session_state and st.session_state.mythos_output:
+                st.markdown("---")
+                st.markdown("#### The Forged Legend")
+                st.markdown(st.session_state.mythos_output)
+                
+                display_export_buttons(st.session_state.mythos_output, "forged_myth")
+                if st.button("Clear Myth", key="clear_mythos_output", use_container_width=True):
+                    st.session_state.mythos_output = None
+                    st.rerun()
+
+        elif selected_tool == "🎭 Persona Crafter":
+            st.markdown("<small>Describe a personality, and the AI will generate a formal instruction set to create a new AI persona.</small>", unsafe_allow_html=True)
+            
+            persona_description = st.text_area(
+                "Describe the persona you want to create",
+                placeholder="e.g., 'A cheerful but forgetful wizard who explains science with magic analogies.'",
+                height=150,
+                key="persona_crafter_input"
+            )
+
+            if st.button("🎭 Craft Persona", key="persona_crafter_button", use_container_width=True):
+                if persona_description:
+                    st.session_state.persona_crafter_output = None # Clear previous
+                    with st.spinner("🎭 Shaping the new consciousness..."):
+                        PERSONA_CRAFTER_PROMPT = f'''
+You are a "Persona Crafter," an AI psychologist who designs personalities for other AIs.
+Your task is to convert a user's high-level description of a personality into a detailed, formal instruction prompt.
+
+**INSTRUCTIONS:**
+1.  **Analyze the Description:** Understand the core traits, quirks, and knowledge base from the user's description.
+2.  **Formalize the Prompt:** Write a clear, direct set of instructions for a generative AI. Start with "You are...".
+3.  **Include Core Capabilities:** The persona must be helpful and answer questions based on its character.
+4.  **Append Visualization Rules:** CRITICALLY IMPORTANT - You MUST append the standard visualization instructions to the end of the persona description. This ensures the new persona can still create plots.
+5.  **Output Format:** The final output should be the complete persona prompt as a single block of text. Do not add any other commentary.
+
+---
+**User's Description:**
+"{persona_description}"
+---
+**Standard Visualization Instructions to Append:**
+"""
+{VISUALIZATION_INSTRUCTIONS}
+"""
+---
+
+Now, generate the complete AI persona instruction prompt.
+'''
+                        try:
+                            response = model.generate_content(PERSONA_CRAFTER_PROMPT)
+                            st.session_state.persona_crafter_output = response.text
+                        except Exception as e:
+                            st.session_state.persona_crafter_output = f"The persona's creation was flawed: {e}"
+                else:
+                    st.warning("Please describe the persona you wish to create.")
+
+            if "persona_crafter_output" in st.session_state and st.session_state.persona_crafter_output:
+                st.markdown("---")
+                st.markdown("#### Generated Persona Prompt")
+                st.info("You can copy this prompt and add it to the PERSONAS dictionary in the code to make it a permanent option.")
+                st.text_area("Persona Prompt", value=st.session_state.persona_crafter_output, height=300, key="persona_output_display")
+                
+                if st.button("Clear Persona", key="clear_persona_crafter_output", use_container_width=True):
+                    st.session_state.persona_crafter_output = None
                     st.rerun()
 
     st.markdown("---")
