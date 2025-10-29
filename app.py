@@ -2291,25 +2291,49 @@ apply_cosmic_theme(fig, 'Supernova')
     with st.expander("✨ How to Use Event Horizon", expanded=False):
         st.markdown("""
         <small>
-        **Welcome, Traveler! Here’s a quick guide to navigating the cosmos:**
-        
-        *   **🚀 Start a Conversation:** Simply type your query in the "Ask the cosmos..." box and press SEND.
-        *   **📎 Attach Files:** Use the file uploader in the sidebar to provide context. You can upload documents (`.pdf`, `.txt`), data (`.csv`, `.xlsx`), or images.
-        *   **🎓 Change AI Persona:** Select a personality for the AI in the sidebar before starting a new chat. Try the **Cognitive Twin** to have an AI that adapts to your style!
-        
-        **Code & App Generation:**
-        *   **🚀 Genesis Engine:** Describe an app in its sidebar section, and the AI will write the code for you to download.
-        *   **🧪 Code Alchemist:** Paste code into its sidebar section and conversationally refactor it in real-time.
+        **Welcome, Traveler!** This guide will help you master the advanced capabilities of Event Horizon.
 
-        **Data Analysis Tools (appear after uploading data):**
-            *   **🛰️ Precognitive Analysis:** Get a one-shot report on trends in your data.
-            *   **🔬 Hypothesis Engine:** Upload a research paper (`.pdf`) alongside your data to generate novel scientific hypotheses.
-            *   **✨ Magic Visualizer:** Let the AI create an insightful chart from your data automatically.
-            *   **🎼 Cosmic Symphony:** Listen to your data as a unique piece of music.
+        <br>
 
-        **Response Tools:**
-        *   **⚖️ Ethical Compass:** Click the scales icon (⚖️) next to an AI response to perform a bias and ethics analysis on it.
-        *   **🔊 Read Aloud:** Click the speaker icon (🔊) next to an AI response to hear it read aloud.
+        **1. Core Interaction**
+        *   **Start a Conversation:** Type your query in the "Ask the cosmos..." box. You can ask questions, give commands, or have a philosophical discussion.
+        *   **Attach Files:** Use the `📎 Attach files` uploader to provide context. The AI can read text from PDFs, DOCX, and TXT files, analyze data from CSV and Excel files, and even see images.
+        *   **Manage Sessions:** At the top of the sidebar, you can start a `✨ New Chat`, search your history, and load or delete past conversations. You can also rename and export your active session.
+
+        <br>
+
+        **2. Operating Modes & Personas**
+        *   **Select a Mode:** Use the dropdown under `✨ OPERATING MODE` to change how the AI behaves.
+            *   **Personas (e.g., Cosmic Intelligence, Sci-Fi Author):** Each persona has a unique personality, knowledge base, and communication style.
+            *   **Cognitive Twin:** A special adaptive persona that learns and mirrors *your* communication style over the course of a conversation.
+            *   **Image Generation (Canvas):** Switch to this mode to generate images from text descriptions.
+
+        <br>
+
+        **3. Advanced Creation Tools** (Found in the `🛠️ Advanced Creation Tools` expander)
+        *   **🚀 Genesis Engine:** Describe a web application, and the AI will generate a complete, downloadable Streamlit app for you.
+        *   **🧪 Code Alchemist:** Paste a block of code and conversationally refactor it. Ask the AI to add features, fix bugs, or improve performance.
+        *   **📄 Document Oracle:** Upload one or more documents (PDF, DOCX, TXT) to get a comprehensive summary and then ask specific questions about their content.
+        *   **📊 Data Storyteller:** Upload a dataset (CSV/Excel) and the AI will write a full narrative report, complete with insights and auto-generated visualizations.
+        *   **🌍 Multiverse Modeler:** Propose a historical event and a point of divergence (e.g., "What if the Titanic missed the iceberg?"). The AI will model a plausible alternate timeline.
+        *   **🎨 Oneiros Project:** Input an abstract concept, a dream, or a feeling. The AI will interpret it as a multi-sensory experience, generating a surreal image, a poetic story, and an ambient soundscape.
+        *   **📜 Mythos Forge:** Provide a few keywords (e.g., "moon, forgotten city, silver tree"), and the AI will forge a new myth or legend.
+        *   **🎭 Persona Crafter:** Describe a personality, and the AI will generate a formal instruction prompt that you can use to create a new, custom AI persona for the app.
+
+        <br>
+
+        **4. Data Analysis Tools** (Appear when you upload a data file like CSV or Excel)
+        *   **🛰️ Precognitive Analysis:** A one-click tool to get an automated report on your dataset, identifying key statistics, correlations, and potential trends.
+        *   **🔬 Hypothesis Engine:** Upload a dataset *and* a research paper (PDF). The AI will cross-reference them to generate novel scientific hypotheses.
+        *   **✨ Magic Visualizer:** Let the AI analyze your data and automatically create what it thinks is the most insightful chart.
+        *   **🎼 Cosmic Symphony:** Listen to your data! This tool sonifies your dataset, turning patterns and columns into a unique piece of music.
+        *   **📊 Statistical Analyzer, 🔗 Correlation Matrix, etc.:** Specialized tools to quickly generate common and useful plots for your data.
+
+        <br>
+
+        **5. In-Chat Response Tools** (Appear next to AI messages)
+        *   **🔊 Read Aloud:** Click the speaker icon to have the AI's response read to you.
+        *   **⚖️ Ethical Compass:** Click the scales icon to run a bias and ethics audit on the AI's response. This helps promote transparency and identify potential issues.
         </small>
         """, unsafe_allow_html=True)
 
