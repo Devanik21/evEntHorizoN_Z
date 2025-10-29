@@ -12,6 +12,5 @@ statsmodels
 scikit-learn
 tensorflow
 markdown2
-xhtml2pdf==0.2.15
-reportlab==4.2.5
-html5lib==1.1
+weasyprint
+PyPDF2
