@@ -13,6 +13,8 @@ import io
 import zipfile
 import pandas as pd
 import numpy as np
+import markdown2
+from xhtml2pdf import pisa
 
 # --- Plotly for Advanced Visualizations ---
 import plotly.graph_objects as go
@@ -218,6 +220,81 @@ def apply_cosmic_theme(fig, theme_name='Nebula Burst'):
         margin=dict(l=20, r=20, t=50, b=20)
     )
     return fig
+
+# --- EXPORT FUNCTIONS ---
+def create_pdf_from_markdown(markdown_content):
+    """Converts markdown content to a styled PDF in memory."""
+    # Convert markdown to HTML with extras for code blocks and tables
+    html = markdown2.markdown(markdown_content, extras=["fenced-code-blocks", "tables"])
+
+    # Basic CSS for styling the PDF to look clean and professional
+    css = """
+    @page {
+        size: a4 portrait;
+        @frame content_frame {
+            left: 50pt; right: 50pt; top: 50pt; bottom: 50pt;
+        }
+    }
+    body {
+        font-family: 'Helvetica', 'Arial', sans-serif;
+        color: #333;
+        line-height: 1.6;
+    }
+    h1, h2, h3, h4, h5 {
+        color: #1a1a1a;
+        font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+        font-weight: 300;
+    }
+    h1 { font-size: 24pt; }
+    h2 { font-size: 18pt; }
+    h3 { font-size: 14pt; }
+    p, li {
+        font-size: 11pt;
+    }
+    pre {
+        background-color: #f4f4f4;
+        border: 1px solid #ddd;
+        padding: 10px;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    code {
+        font-family: 'Courier New', Courier, monospace;
+        background-color: #f4f4f4;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+    blockquote {
+        border-left: 4px solid #ccc;
+        padding-left: 10px;
+        color: #666;
+        margin-left: 0;
+    }
+    """
+
+    full_html = f"<html><head><style>{css}</style></head><body>{html}</body></html>"
+    pdf_buffer = io.BytesIO()
+    pisa_status = pisa.CreatePDF(io.StringIO(full_html), dest=pdf_buffer, encoding='utf-8')
+
+    if pisa_status.err:
+        return None
+    
+    pdf_buffer.seek(0)
+    return pdf_buffer
+
+def display_export_buttons(content, base_filename):
+    """Displays download buttons for MD, TXT, and PDF formats."""
+    st.markdown("##### 💾 Export Options")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.download_button("📥 MD", content, f"{base_filename}.md", "text/markdown", use_container_width=True, help="Download as Markdown file.")
+    with col2:
+        st.download_button("📥 TXT", content, f"{base_filename}.txt", "text/plain", use_container_width=True, help="Download as plain text file.")
+    with col3:
+        pdf_buffer = create_pdf_from_markdown(content)
+        st.download_button("📥 PDF", pdf_buffer, f"{base_filename}.pdf", "application/pdf", use_container_width=True, help="Download as formatted PDF file.", disabled=not pdf_buffer)
 
 # --- DATA TOOL FUNCTIONS ---
 def statistical_analysis(df):
@@ -911,6 +988,8 @@ if "alchemist_explanation" not in st.session_state:
     st.session_state.alchemist_explanation = None
 if "oneiros_output" not in st.session_state:
     st.session_state.oneiros_output = None
+if "show_chat_export" not in st.session_state:
+    st.session_state.show_chat_export = False
 if "multiverse_report" not in st.session_state:
     st.session_state.multiverse_report = None
 if "canvas_mode" not in st.session_state:
@@ -973,6 +1052,7 @@ with st.sidebar:
             new_session_id = create_new_session(db, persona_name=st.session_state.selected_persona)
             st.session_state.current_session_id = new_session_id
             st.session_state.messages = []
+            st.session_state.show_chat_export = False
             st.rerun()
     
     with col2:
@@ -1006,6 +1086,7 @@ with st.sidebar:
                     st.session_state.current_session_id = session_id
                     st.session_state.messages = load_session_messages(db, session_id)
                     st.session_state.selected_persona = get_session_persona(db, session_id) # Update selector state
+                    st.session_state.show_chat_export = False
                     st.rerun()
             
             with col2:
@@ -1032,20 +1113,17 @@ with st.sidebar:
         else:
             st.caption(f"📍 {current_name}")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✏️ Rename", use_container_width=True):
-                st.session_state.renaming_session_id = st.session_state.current_session_id
-                st.rerun()
-        with col2:
+        if st.button("✏️ Rename", use_container_width=True):
+            st.session_state.renaming_session_id = st.session_state.current_session_id
+            st.rerun()
+        
+        if st.button("📥 Export Chat", use_container_width=True, help="Click to show export options"):
+            st.session_state.show_chat_export = not st.session_state.show_chat_export
+        
+        if st.session_state.get('show_chat_export', False):
             markdown_export = format_chat_as_markdown(st.session_state.messages, current_name)
-            st.download_button(
-                label="📥 Export",
-                data=markdown_export,
-                file_name=f"{current_name.replace(' ', '_')}.md",
-                mime="text/markdown",
-                use_container_width=True
-            )
+            safe_filename = "".join(c for c in current_name if c.isalnum() or c in (' ', '_')).rstrip().replace(' ', '_')
+            display_export_buttons(markdown_export, safe_filename)
 
     st.markdown("---")
     # --- ADVANCED CREATION TOOLS ---
@@ -1172,6 +1250,9 @@ Your task is to take a user's description of a web tool or dashboard and generat
                 
                 st.code(st.session_state.alchemist_code, language='python')
 
+                # Add export options for the code
+                display_export_buttons(st.session_state.alchemist_code, "refactored_code")
+
                 refactor_instruction = st.text_area(
                     "How should I refactor this?",
                     placeholder="e.g., 'Convert this to an asynchronous version.'",
@@ -1273,6 +1354,9 @@ Begin your temporal analysis now.
             if "multiverse_report" in st.session_state and st.session_state.multiverse_report:
                 st.markdown("---")
                 st.markdown(st.session_state.multiverse_report)
+                
+                # Add export options
+                display_export_buttons(st.session_state.multiverse_report, "multiverse_report")
                 if st.button("Clear Report", key="clear_multiverse_report", use_container_width=True):
                     st.session_state.multiverse_report = None
                     st.rerun()
@@ -1356,6 +1440,9 @@ Begin your composition now."""
                 if 'story' in output:
                     st.markdown("##### A Story from the Ether")
                     st.markdown(f"> {output['story']}")
+                    
+                    # Add export options for the story
+                    display_export_buttons(output['story'], "oneiros_story")
 
                 if 'audio' in output:
                     st.markdown("##### The Sound of the Feeling")
@@ -1872,7 +1959,12 @@ apply_cosmic_theme(fig, 'Supernova')
                         }
                         st.rerun()
             else:
+                is_ethics_report = "Ethical Compass Report" in content
                 st.markdown(content)
+                if message["role"] == "assistant" and is_ethics_report:
+                    st.markdown("---")
+                    safe_ts = message['timestamp'].replace(':', '-').replace('.', '-')
+                    display_export_buttons(content, f"ethical_report_{safe_ts}")
 
             if message["role"] == "assistant" and message.get("suggestions") and not is_image_message:
                 st.markdown("<br>", unsafe_allow_html=True)
