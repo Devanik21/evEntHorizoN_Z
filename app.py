@@ -1396,23 +1396,8 @@ Begin your temporal analysis now.
                                 st.session_state.oneiros_output['image'] = base64.b64encode(image_bytes).decode('utf-8')
 
                             # Step 2: Generate Story
-                            story_prompt = f"""
-You are a master storyteller who writes vivid, immersive, first-person dream narratives.
-Your task is to take the user's dream description and turn it into a short story that feels like you are living it.
-
-**INSTRUCTIONS:**
-1.  **First-Person Perspective:** Write from the "I" perspective. The user is the protagonist.
-2.  **Immersive & Sensory Details:** Use direct actions, feelings, and sensory details (what I see, hear, feel, touch). Describe interactions directly. For example, instead of "our hands were close," write "I reached out and took her hand. It was warm."
-3.  **Direct Narrative:** Avoid overly poetic, abstract, or metaphorical language. The story should be a clear sequence of events and feelings.
-4.  **Match the Tone:** Adapt the story's genre and tone to the user's input. If the dream is romantic, make it warm and heartfelt. If it's scary, make it a horror story. If it's adventurous, make it exciting.
-5.  **Engaging Dialogue/Internal Monologue:** Include direct speech or the protagonist's internal thoughts to make it more personal and engaging.
-
-**User's Dream Description:**
-'{dream_input}'
-
-Now, write the story.
-"""
-                            story_text = get_cosmic_response(story_prompt, "You are a master storyteller.")
+                            story_prompt = f"You are a surrealist poet. Write a short, abstract, dream-like story or poem about the feeling of '{dream_input}'. Evoke emotion through metaphor and strange imagery, not direct explanation."
+                            story_text = get_cosmic_response(story_prompt, "You are a surrealist poet.")
                             st.session_state.oneiros_output['story'] = story_text
 
                             # Step 3: Generate Audio
