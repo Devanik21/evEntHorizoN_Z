@@ -1011,6 +1011,14 @@ if "mythos_output" not in st.session_state:
     st.session_state.mythos_output = None
 if "persona_crafter_output" not in st.session_state:
     st.session_state.persona_crafter_output = None
+if "doc_oracle_summary" not in st.session_state:
+    st.session_state.doc_oracle_summary = None
+if "doc_oracle_qa" not in st.session_state:
+    st.session_state.doc_oracle_qa = []
+if "doc_oracle_docs" not in st.session_state:
+    st.session_state.doc_oracle_docs = None
+if "data_story_report" not in st.session_state:
+    st.session_state.data_story_report = None
 
 # Main content area
 st.markdown("<br>", unsafe_allow_html=True)
@@ -1145,7 +1153,7 @@ with st.sidebar:
     st.markdown("---")
     # --- ADVANCED CREATION TOOLS ---
     with st.expander("🛠️ Advanced Creation Tools"):
-        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist", "🌍 Multiverse Modeler", "🎨 Oneiros Project", "📜 Mythos Forge", "🎭 Persona Crafter"]
+        TOOL_OPTIONS = ["🚀 Genesis Engine", "🧪 Code Alchemist", "📄 Document Oracle", "📊 Data Storyteller", "🌍 Multiverse Modeler", "🎨 Oneiros Project", "📜 Mythos Forge", "🎭 Persona Crafter"]
 
         selected_tool = st.selectbox(
             "Select a creation tool",
@@ -1313,6 +1321,166 @@ Begin your work now."""
                     st.session_state.alchemist_code = None
                     st.session_state.alchemist_explanation = None
                     st.rerun()
+
+        elif selected_tool == "📄 Document Oracle":
+            st.markdown("<small>Upload documents to get a summary and ask specific questions about their content.</small>", unsafe_allow_html=True)
+
+            oracle_files = st.file_uploader(
+                "Upload your documents (PDF, TXT, DOCX)",
+                type=['pdf', 'txt', 'docx'],
+                accept_multiple_files=True,
+                key="doc_oracle_uploader"
+            )
+
+            if st.button("🔎 Analyze & Summarize", key="doc_oracle_summarize", use_container_width=True, disabled=not oracle_files):
+                if oracle_files:
+                    st.session_state.doc_oracle_summary = None
+                    st.session_state.doc_oracle_qa = []
+                    st.session_state.doc_oracle_docs = None
+                    
+                    with st.spinner("📚 Extracting knowledge from documents..."):
+                        doc_texts = []
+                        for doc in oracle_files:
+                            text, content_type = process_uploaded_file(doc)
+                            if content_type == "text":
+                                doc_texts.append(f"--- Content from {doc.name} ---\n{text}")
+                            else:
+                                st.warning(f"Could not process {doc.name}: {text}")
+                        
+                        if doc_texts:
+                            full_text = "\n\n".join(doc_texts)
+                            st.session_state.doc_oracle_docs = full_text
+
+                            SUMMARY_PROMPT = f"""
+You are a "Document Oracle," an AI expert in synthesizing information.
+Your task is to read the following document(s) and provide a comprehensive, structured summary.
+
+**INSTRUCTIONS:**
+1.  **Identify Key Themes:** Determine the main topics, arguments, and conclusions.
+2.  **Create a Structured Summary:** Organize the summary with clear headings and bullet points.
+3.  **Extract Actionable Insights:** Pull out key takeaways, recommendations, or data points.
+4.  **Output Format:** Your response should be in Markdown.
+
+**Document Content:**
+{full_text}
+
+Begin your summary.
+"""
+                            try:
+                                response = model.generate_content(SUMMARY_PROMPT)
+                                st.session_state.doc_oracle_summary = response.text
+                            except Exception as e:
+                                st.session_state.doc_oracle_summary = f"An error occurred during summarization: {e}"
+                st.rerun()
+
+            if st.session_state.get("doc_oracle_summary"):
+                st.markdown("---")
+                st.markdown("#### 📜 Document Summary")
+                st.markdown(st.session_state.doc_oracle_summary)
+                display_export_buttons(st.session_state.doc_oracle_summary, "document_summary")
+
+                st.markdown("---")
+                st.markdown("#### ❓ Ask a Question")
+                
+                for qa in st.session_state.get("doc_oracle_qa", []):
+                    with st.chat_message("user", avatar="❓"):
+                        st.markdown(qa['q'])
+                    with st.chat_message("assistant", avatar="🗣️"):
+                        st.markdown(qa['a'])
+
+                question = st.text_input("Ask a specific question about the documents:", key="doc_oracle_question", label_visibility="collapsed", placeholder="Ask a specific question...")
+
+                if st.button("💬 Ask Oracle", key="doc_oracle_ask", use_container_width=True):
+                    if question and st.session_state.get("doc_oracle_docs"):
+                        with st.spinner("Consulting the oracle..."):
+                            QA_PROMPT = f"""
+You are a "Document Oracle." You have already read the documents.
+Answer the user's question based *only* on the information within these documents.
+If the answer is not in the documents, state that clearly.
+
+**Full Document Content:**
+{st.session_state.doc_oracle_docs}
+---
+**User's Question:** "{question}"
+
+Provide your answer."""
+                            try:
+                                response = model.generate_content(QA_PROMPT)
+                                answer = response.text
+                                st.session_state.doc_oracle_qa.append({'q': question, 'a': answer})
+                            except Exception as e:
+                                st.error(f"The oracle could not answer: {e}")
+                        st.rerun()
+                    elif not question:
+                        st.warning("Please ask a question.")
+
+            if st.session_state.get("doc_oracle_summary") or st.session_state.get("doc_oracle_qa"):
+                if st.button("Clear Oracle Session", key="clear_doc_oracle", use_container_width=True):
+                    st.session_state.doc_oracle_summary = None
+                    st.session_state.doc_oracle_qa = []
+                    st.session_state.doc_oracle_docs = None
+                    st.rerun()
+
+        elif selected_tool == "📊 Data Storyteller":
+            st.markdown("<small>Upload a dataset and the AI will generate a narrative report with visualizations.</small>", unsafe_allow_html=True)
+
+            data_story_file = st.file_uploader("Upload your dataset (CSV, XLS, XLSX)", type=['csv', 'xls', 'xlsx'], key="data_story_uploader")
+            story_focus = st.text_input("What should the story focus on? (Optional)", placeholder="e.g., 'Analyze sales performance by region.'", key="data_story_focus")
+
+            if st.button("📖 Tell Me a Story", key="data_story_button", use_container_width=True, disabled=not data_story_file):
+                if data_story_file:
+                    st.session_state.data_story_report = None
+                    with st.spinner("✍️ Weaving a story from your data..."):
+                        try:
+                            data_story_file.seek(0)
+                            df = pd.read_csv(data_story_file) if Path(data_story_file.name).suffix.lower() == '.csv' else pd.read_excel(data_story_file)
+                            st.session_state.dataframe_for_viz = df
+
+                            buffer = io.StringIO(); df.info(buf=buffer)
+                            data_summary = f"Data Summary:\nFirst 5 rows:\n{df.head().to_string()}\n\nStats:\n{df.describe().to_string()}\n\nInfo:\n{buffer.getvalue()}"
+                            
+                            STORYTELLER_PROMPT = f"""You are a "Data Storyteller," a senior data analyst who turns raw data into compelling narratives. Generate a full report in Markdown with insights and Plotly visualizations.
+
+**INSTRUCTIONS:**
+1.  **Analyze Data & User Focus:** Review the data summary. Use the user's focus to guide your analysis. If no focus is provided, perform a general exploratory analysis.
+2.  **Craft a Narrative:** Write a story about the data. Start with an overview, dive into specific findings, and conclude with key takeaways.
+3.  **Generate Visualizations:** For each key finding, you MUST generate Python code for a Plotly visualization in a ```python ... ``` block.
+    *   Assume data is in a pandas DataFrame named `df`.
+    *   The final figure object MUST be named `fig`.
+    *   You MUST call `apply_cosmic_theme(fig, 'Theme Name')`. Themes: 'Nebula Burst', 'Starlight', 'Void', 'Supernova', 'Quantum Foam'.
+
+---
+**User's Focus:** {story_focus if story_focus else "General exploratory analysis."}
+---
+**Dataset Summary:**\n{data_summary}
+---
+Begin your data story."""
+                            response = model.generate_content(STORYTELLER_PROMPT)
+                            st.session_state.data_story_report = response.text
+                        except Exception as e:
+                            st.session_state.data_story_report = f"The data's story could not be told: {e}"
+                st.rerun()
+
+            if st.session_state.get("data_story_report"):
+                st.markdown("---"); st.markdown("#### 📊 Your Data Story")
+                content = st.session_state.data_story_report
+                parts = content.split('```')
+                for i, part in enumerate(parts):
+                    if not part.strip(): continue
+                    if i % 2 == 1:
+                        lines = part.split('\n', 1); lang, code = (lines[0].strip(), lines[1]) if len(lines) > 1 else ("", lines[0])
+                        if lang == 'python':
+                            try:
+                                local_scope = {'go': go, 'px': px, 'pd': pd, 'np': np, 'stats': stats, 'apply_cosmic_theme': apply_cosmic_theme, 'df': st.session_state.dataframe_for_viz}
+                                exec(code, local_scope)
+                                if 'fig' in local_scope: st.plotly_chart(local_scope['fig'], use_container_width=True, theme=None)
+                                else: st.code(code, language='python')
+                            except Exception as e: st.error(f"🔮 Plotting Interference: {e}"); st.code(code, language='python')
+                        else: st.code(code, language=lang if lang else "plaintext")
+                    else: st.markdown(part)
+                display_export_buttons(st.session_state.data_story_report, "data_story_report")
+                if st.button("Clear Story", key="clear_data_story_report", use_container_width=True):
+                    st.session_state.data_story_report = None; st.session_state.dataframe_for_viz = None; st.rerun()
 
         elif selected_tool == "🌍 Multiverse Modeler":
             st.markdown("<small>Propose a historical event and a point of divergence. The AI will model a plausible alternate timeline and its consequences.</small>", unsafe_allow_html=True)
